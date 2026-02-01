@@ -26,6 +26,21 @@ let gameState = {
     toolRank: 0
 };
 
+// Helper to get rank data (supports infinite ranks)
+function getBlockRankData(rankIndex) {
+    if (rankIndex < blockRanks.length) {
+        return blockRanks[rankIndex];
+    }
+
+    // Infinite progression after Rainbow
+    const extraLevels = rankIndex - (blockRanks.length - 1);
+    return {
+        name: `Rainbow +${extraLevels}`,
+        class: "rank-10", // Keep using rainbow style
+        multiplier: 100 + (extraLevels * 20) // +20 multiplier per extra level
+    };
+}
+
 // DOM Elements
 const scoreEl = document.getElementById('score');
 const powerEl = document.getElementById('power');
@@ -48,7 +63,8 @@ function init() {
 
 function handleBlockClick(e) {
     const basePower = toolRanks[gameState.toolRank].power;
-    const multiplier = blockRanks[gameState.blockRank].multiplier;
+    const rankData = getBlockRankData(gameState.blockRank);
+    const multiplier = rankData.multiplier;
     const totalPower = basePower * multiplier;
 
     gameState.score += totalPower;
@@ -66,6 +82,7 @@ function handleBlockClick(e) {
     }
 
     createClickEffect(x, y, totalPower);
+    showToolAnimation(x, y); // New tool animation
     updateUI();
 
     // Add a small scale animation reset
@@ -89,8 +106,36 @@ function createClickEffect(x, y, amount) {
     }, 800);
 }
 
+// New tool swing animation
+function showToolAnimation(x, y) {
+    const el = document.createElement('div');
+    el.className = 'tool-animation';
+    el.innerHTML = '<i class="fas fa-hammer"></i>'; // Using hammer as pickaxe/tool
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+
+    // Random slight rotation for variety
+    const randomAngle = Math.random() * 30 - 15;
+    el.style.transform = `rotate(${randomAngle}deg)`;
+
+    clickEffectsEl.appendChild(el);
+
+    setTimeout(() => {
+        el.remove();
+    }, 500);
+}
+
 function getBlockUpgradeCost() {
-    return (gameState.blockRank + 1) * 100;
+    const rank = gameState.blockRank;
+    // Standard scaling for initial ranks
+    if (rank < blockRanks.length - 1) {
+        return (rank + 1) * 100;
+    }
+    // Exponential scaling for infinite ranks
+    // Base 2000 * 1.5^(levels past Base)
+    const extraLevels = rank - (blockRanks.length - 1);
+    const baseCost = 2000;
+    return Math.floor(baseCost * Math.pow(1.5, extraLevels));
 }
 
 function getToolUpgradeCost() {
@@ -99,7 +144,8 @@ function getToolUpgradeCost() {
 
 function buyBlockUpgrade() {
     const cost = getBlockUpgradeCost();
-    if (gameState.score >= cost && gameState.blockRank < blockRanks.length - 1) {
+    // Allow infinite upgrades, so no max check needed here (or check if number is safe)
+    if (gameState.score >= cost) {
         gameState.score -= cost;
         gameState.blockRank++;
         renderShop(); // Re-render to show next upgrade
@@ -122,27 +168,27 @@ function buyToolUpgrade() {
 function renderShop() {
     // Block Shop
     blockShopEl.innerHTML = '';
-    if (gameState.blockRank < blockRanks.length - 1) {
-        const nextRank = gameState.blockRank + 1;
-        const cost = getBlockUpgradeCost();
-        const item = document.createElement('div');
-        item.id = 'btn-buy-block';
-        item.className = `shop-item ${gameState.score >= cost ? '' : 'disabled'}`;
-        item.onclick = () => buyBlockUpgrade();
-        item.innerHTML = `
-            <div class="item-info">
-                <h4>Upgrade to ${blockRanks[nextRank].name}</h4>
-                <div class="item-cost"><i class="fas fa-cube"></i> ${cost}</div>
-                <div class="item-desc">x${blockRanks[nextRank].multiplier} Multiplier</div>
-            </div>
-            <div class="item-icon">
-                <i class="fas fa-arrow-up"></i>
-            </div>
-        `;
-        blockShopEl.appendChild(item);
-    } else {
-        blockShopEl.innerHTML = '<div class="shop-item disabled"><div class="item-info"><h4>Max Rank Reached</h4></div></div>';
-    }
+    // Always allow upgrade now (Information Progression)
+    const nextRank = gameState.blockRank + 1;
+    const nextRankData = getBlockRankData(nextRank);
+    const cost = getBlockUpgradeCost();
+
+    const item = document.createElement('div');
+    item.id = 'btn-buy-block';
+    item.className = `shop-item ${gameState.score >= cost ? '' : 'disabled'}`;
+    item.onclick = () => buyBlockUpgrade();
+    item.innerHTML = `
+        <div class="item-info">
+            <h4>Upgrade to ${nextRankData.name}</h4>
+            <div class="item-cost"><i class="fas fa-cube"></i> ${cost.toLocaleString()}</div>
+            <div class="item-desc">x${nextRankData.multiplier} Multiplier</div>
+        </div>
+        <div class="item-icon">
+            <i class="fas fa-arrow-up"></i>
+        </div>
+    `;
+    blockShopEl.appendChild(item);
+
 
     // Tool Shop
     toolShopEl.innerHTML = '';
@@ -156,7 +202,7 @@ function renderShop() {
         item.innerHTML = `
             <div class="item-info">
                 <h4>Upgrade to ${toolRanks[nextRank].name}</h4>
-                <div class="item-cost"><i class="fas fa-cube"></i> ${cost}</div>
+                <div class="item-cost"><i class="fas fa-cube"></i> ${cost.toLocaleString()}</div>
                 <div class="item-desc">+${toolRanks[nextRank].power} Power</div>
             </div>
             <div class="item-icon">
@@ -170,20 +216,22 @@ function renderShop() {
 }
 
 function updateUI() {
-    scoreEl.textContent = Math.floor(gameState.score);
+    scoreEl.textContent = Math.floor(gameState.score).toLocaleString();
 
     const basePower = toolRanks[gameState.toolRank].power;
-    const multiplier = blockRanks[gameState.blockRank].multiplier;
+    const rankData = getBlockRankData(gameState.blockRank);
+    const multiplier = rankData.multiplier;
     powerEl.textContent = (basePower * multiplier).toLocaleString();
 
     // Update Block Appearance
     // Remove all rank classes first
     blockEl.className = 'block';
-    blockEl.classList.add(blockRanks[gameState.blockRank].class);
+    blockEl.classList.add(rankData.class);
 
     // Update Shop Buttons State
     const blockBtn = document.getElementById('btn-buy-block');
     if (blockBtn) {
+        // Recalculate cost dynamically as it might change
         const cost = getBlockUpgradeCost();
         if (gameState.score >= cost) {
             blockBtn.classList.remove('disabled');

@@ -341,6 +341,41 @@ body {
     }
 }
 
+/* Tool Animation */
+.tool-animation {
+    position: absolute;
+    pointer-events: none;
+    z-index: 101;
+    font-size: 2rem;
+    color: #e0e0e0;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    animation: toolSwing 0.5s ease-out forwards;
+    transform-origin: bottom right;
+    /* Rotate from handle */
+}
+
+@keyframes toolSwing {
+    0% {
+        transform: rotate(45deg) scale(0.5);
+        opacity: 0;
+    }
+
+    20% {
+        transform: rotate(-45deg) scale(1.2);
+        opacity: 1;
+    }
+
+    60% {
+        transform: rotate(-45deg) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: rotate(-45deg) translateY(-20px) scale(0.8);
+        opacity: 0;
+    }
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .game-container {
