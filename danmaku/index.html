@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Barrage | kikennmodsett</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="overlay">
+            <h1>NEON BARRAGE</h1>
+            <p>Avoid the bullets. Survive 3 phases.</p>
+            <div class="difficulty-select">
+                <button class="btn" data-difficulty="easy">EASY</button>
+                <button class="btn" data-difficulty="normal">NORMAL</button>
+                <button class="btn" data-difficulty="hard">HARD</button>
+            </div>
+
+            <div class="control-select">
+                <p class="control-label">Control Method:</p>
+                <div class="radio-group">
+                    <label class="radio-btn">
+                        <input type="radio" name="control" value="mouse" checked>
+                        <span class="radio-visual">Mouse</span>
+                    </label>
+                    <label class="radio-btn">
+                        <input type="radio" name="control" value="keyboard">
+                        <span class="radio-visual">Keyboard (Arrows/WASD)</span>
+                    </label>
+                </div>
+            </div>
+            <a href="../index.html" class="back-link">Back to Portfolio</a>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" class="hud hidden">
+            <div class="hud-item">PHASE: <span id="phaseDisplay">1</span>/3</div>
+            <div class="hud-item">TIME: <span id="timeDisplay">0.00</span></div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="overlay hidden">
+            <h2 class="danger">GAME OVER</h2>
+            <p>You survived for <span id="finalTime">0</span> seconds</p>
+            <button class="btn" id="retryBtn">RETRY</button>
+            <a href="../index.html" class="back-link">Back to Portfolio</a>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="victoryScreen" class="overlay hidden">
+            <h2 class="success">MISSION CLEAR</h2>
+            <p>Congratulations! You survived all phases.</p>
+            <p>Difficulty: <span id="clearDifficulty">-</span></p>
+            <button class="btn" id="playAgainBtn">PLAY AGAIN</button>
+            <a href="../index.html" class="back-link">Back to Portfolio</a>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
