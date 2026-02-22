@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Adventure - 300 Quests & 400 Monsters</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-container" class="pixel-art">
+        <header id="game-header">
+            <div id="player-summary">
+                <span id="player-name">勇者</span>
+                <span id="player-level">Lv. 1</span>
+                <span id="player-hp-bar">HP: 100/100</span>
+            </div>
+            <div id="currency-summary">
+                <span id="player-gold">0 G</span>
+            </div>
+        </header>
+
+        <main id="game-screen">
+            <!-- フィールド、バトル、ショップなどがここに動的に展開される -->
+            <div id="message-log"></div>
+            <div id="action-panel"></div>
+        </main>
+
+        <nav id="game-menu">
+            <button id="btn-status">ステータス</button>
+            <button id="btn-quests">クエスト</button>
+            <button id="btn-shop">ショップ</button>
+            <button id="btn-save">セーブ</button>
+        </nav>
+
+        <!-- モーダルウィンドウ (ステータス割り振りなど) -->
+        <div id="modal-container" class="hidden">
+            <div id="modal-content">
+                <button id="modal-close">×</button>
+                <div id="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="src/game.js"></script>
+</body>
+
+</html>
