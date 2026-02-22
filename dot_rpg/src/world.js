@@ -6,47 +6,38 @@ export class World {
         this.canvas = document.getElementById('world-map-canvas');
         this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.playerSprite = document.getElementById('player-sprite');
+        this.coordElement = document.getElementById('player-coords');
+
+        this.minimapCanvas = document.getElementById('minimap-canvas');
+        this.minimapCtx = this.minimapCanvas.getContext('2d');
 
         this.tileSize = 32;
-        this.mapSize = 500; // 500x500の超巨大マップ (25万タイル)
+        this.mapSize = 1000; // 1000x1000 (100万タイル)
         this.mapData = [];
 
-        // キャンバスサイズをコンテナに合わせる
         this.canvas.width = this.container.offsetWidth;
         this.canvas.height = this.container.offsetHeight;
 
-        // 固定オブジェクト（町、ダンジョン）
+        // 固定拠点
         this.locations = [
-            { id: 'town_start', name: "始まりの町", x: 10, y: 10, type: 'town', npcs: [{ name: "村長", message: "Canvasの力で世界が500x500に広がったぞ！" }] },
-            { id: 'town_central', name: "メガリス中央都", x: 250, y: 250, type: 'town', npcs: [{ name: "兵士", message: "ここが世界の中心だ。" }] },
-            { id: 'town_snow', name: "凍土の都", x: 50, y: 450, type: 'town', npcs: [{ name: "守り人", message: "北西は常に凍てついている。" }] },
-            { id: 'town_desert', name: "黄金の砂漠都市", x: 450, y: 50, type: 'town', npcs: [{ name: "商人", message: "南東の砂地には金が眠るという。" }] },
-            { id: 'town_volcano', name: "火噴き村", x: 450, y: 450, type: 'town', npcs: [{ name: "職人", message: "南西の火山帯は危険がいっぱいだ。" }] },
-            { id: 'town_islet', name: "孤島のリゾート", x: 50, y: 50, type: 'town', npcs: [{ name: "旅人", message: "この北東の海原を渡ってきたのか？" }] },
-            { id: 'town_forest', name: "巨木の里", x: 120, y: 280, type: 'town', npcs: [{ name: "エルフ", message: "森の囁きを聞くが良い。" }] },
-            { id: 'town_mine', name: "廃鉱の町", x: 380, y: 150, type: 'town', npcs: [{ name: "工夫", message: "この奥には巨大な魔物が..." }] },
-
-            // ダンジョン
-            { id: 'dungeon_1', name: "試練の洞窟", x: 15, y: 20, type: 'dungeon', recLv: 5 },
-            { id: 'dungeon_water', name: "深海神殿", x: 60, y: 40, type: 'dungeon', recLv: 50 },
-            { id: 'dungeon_forest', name: "暗黒樹海", x: 140, y: 300, type: 'dungeon', recLv: 120 },
-            { id: 'dungeon_desert', name: "ピラミッドの迷宮", x: 460, y: 30, type: 'dungeon', recLv: 250 },
-            { id: 'dungeon_snow', name: "絶対零度の獄", x: 30, y: 470, type: 'dungeon', recLv: 400 },
-            { id: 'dungeon_fire', name: "灼熱の終焉", x: 470, y: 470, type: 'dungeon', recLv: 600 },
-            { id: 'dungeon_sky', name: "天空の城", x: 250, y: 10, type: 'dungeon', recLv: 800 },
-            { id: 'dungeon_last', name: "次元の狭間 (Last)", x: 495, y: 495, type: 'dungeon', recLv: 1000 }
+            { id: 'town_start', name: "始まりの町", x: 10, y: 10, type: 'town', npcs: [{ name: "村長", message: "100万タイルの大台へようこそ！" }] },
+            { id: 'town_central', name: "千都メガリス", x: 500, y: 500, type: 'town', npcs: [{ name: "王様", message: "広大すぎる世界を旅する勇気はあるか。" }] },
+            { id: 'town_north', name: "北端の要塞", x: 500, y: 50, type: 'town' },
+            { id: 'town_south', name: "南の楽園", x: 500, y: 950, type: 'town' },
+            { id: 'town_west', name: "西の夕日町", x: 50, y: 500, type: 'town' },
+            { id: 'town_east', name: "東の日の出町", x: 950, y: 500, type: 'town' },
+            { id: 'dungeon_last', name: "終焉の地 (Last)", x: 990, y: 990, type: 'dungeon', recLv: 1000 }
         ];
 
-        // 拠点のランダム追加配置を増量
-        for (let i = 1; i <= 35; i++) {
-            const rx = Math.floor(Math.random() * 480) + 10;
-            const ry = Math.floor(Math.random() * 480) + 10;
-            if (!this.locations.find(l => l.x === rx && l.y === ry)) {
-                this.locations.push({
-                    id: `hidden_spot_${i}`, name: `伝説の遺構 #${i}`,
-                    x: rx, y: ry, type: 'dungeon', recLv: 150 + i * 20
-                });
-            }
+        // 100箇所の拠点をランダム分散配置
+        for (let i = 1; i <= 95; i++) {
+            this.locations.push({
+                id: `landmark_${i}`, name: `未知の遺跡 #${i}`,
+                x: Math.floor(Math.random() * 980) + 10,
+                y: Math.floor(Math.random() * 980) + 10,
+                type: Math.random() < 0.3 ? 'town' : 'dungeon',
+                recLv: 50 + i * 10
+            });
         }
 
         this.playerX = 10;
@@ -56,31 +47,47 @@ export class World {
 
         this.initMap();
         this.setupControls();
-        this.render(); // 描画ループ開始
+        this.render();
     }
 
     initMap() {
-        // データ生成のみ
+        const seeds = [];
+        // 森・山・水の種を各40個ずつ
+        for (let i = 0; i < 120; i++) {
+            seeds.push({
+                x: Math.floor(Math.random() * this.mapSize),
+                y: Math.floor(Math.random() * this.mapSize),
+                type: i < 40 ? 'forest' : (i < 80 ? 'mountain' : 'water'),
+                radius: 5 + Math.random() * 15
+            });
+        }
+
+        const locMap = new Map();
+        this.locations.forEach(l => locMap.set(`${l.x},${l.y}`, l.type));
+
         for (let y = 0; y < this.mapSize; y++) {
             this.mapData[y] = [];
             for (let x = 0; x < this.mapSize; x++) {
                 let type = 'grass';
-                const loc = this.locations.find(l => l.x === x && l.y === y);
-                if (loc) {
-                    type = loc.type;
+                const locType = locMap.get(`${x},${y}`);
+                if (locType) {
+                    type = locType;
                 } else {
-                    // バイオーム設定
-                    if (y > 400 && x < 100) type = 'snow'; // 北西
-                    else if (y < 100 && x > 400) type = 'desert'; // 南東
-                    else if (y > 400 && x > 400) type = 'volcano'; // 南西
-                    else if (Math.random() < 0.1) type = 'forest';
-                    else if (Math.random() < 0.05) type = 'mountain';
-                    else if (Math.random() < 0.02) type = 'water';
+                    // バイオーム境界
+                    if (y < 200) type = 'snow';
+                    else if (y > 800) type = 'volcano';
+                    else if (x > 800) type = 'desert';
+                    else {
+                        // 種に近いかどうかで地形を決定 (クラスタリング)
+                        const s = seeds.find(s => Math.abs(s.x - x) < s.radius && Math.abs(s.y - y) < s.radius);
+                        if (s) type = s.type;
+                    }
                 }
                 this.mapData[y][x] = type;
             }
         }
         this.playerSprite.className = 'hero-visual';
+        this.drawMinimapBase(); // ミニマップの下地を一回だけ描画
     }
 
     setupControls() {
@@ -145,17 +152,61 @@ export class World {
         this.cameraX = (containerWidth / 2) - this.pTargetLeft - (this.tileSize / 2);
         this.cameraY = (containerHeight / 2) - this.pTargetTop - (this.tileSize / 2);
 
-        // スプライトはCSSで動かす（Canvas上ではなくDOMとして重ねる）
         this.playerSprite.style.left = `${this.pTargetLeft}px`;
         this.playerSprite.style.top = `${this.pTargetTop}px`;
         this.playerSprite.style.transform = `translate(${this.cameraX}px, ${this.cameraY}px)`;
+
+        // 座標更新
+        if (this.coordElement) {
+            this.coordElement.innerText = `(${this.playerX}, ${this.playerY})`;
+        }
+    }
+
+    drawMinimapBase() {
+        const ctx = this.minimapCtx;
+        const w = this.minimapCanvas.width = this.mapSize;
+        const h = this.minimapCanvas.height = this.mapSize;
+
+        const colors = {
+            grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
+            town: "#ff0", dungeon: "#f0f", snow: "#fff", desert: "#e6be8a", volcano: "#a00"
+        };
+
+        const img = ctx.createImageData(w, h);
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const type = this.mapData[y][x];
+                const colorStr = colors[type];
+                // 簡易色変換
+                const r = parseInt(colorStr.slice(1, 3), 16) || 0;
+                const g = parseInt(colorStr.slice(3, 5), 16) || 0;
+                const b = parseInt(colorStr.slice(5, 7), 16) || 0;
+                const idx = (y * w + x) * 4;
+                img.data[idx] = r;
+                img.data[idx + 1] = g;
+                img.data[idx + 2] = b;
+                img.data[idx + 3] = 255;
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+        this.minimapBaseImg = ctx.getImageData(0, 0, w, h);
     }
 
     render() {
         if (!this.container.classList.contains('hidden')) {
             this.draw();
+            this.drawMinimapOverlay();
         }
         requestAnimationFrame(() => this.render());
+    }
+
+    drawMinimapOverlay() {
+        const ctx = this.minimapCtx;
+        ctx.putImageData(this.minimapBaseImg, 0, 0);
+
+        // プレイヤーのドット
+        ctx.fillStyle = "#0ff";
+        ctx.fillRect(this.playerX - 5, this.playerY - 5, 10, 10);
     }
 
     draw() {
