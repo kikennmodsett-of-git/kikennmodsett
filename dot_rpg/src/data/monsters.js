@@ -8,7 +8,7 @@ export const MonsterData = {
         const shapes = ["slime", "beast", "ghost", "dragon", "knight"];
         const elements = ["炎", "氷", "風", "土", "光", "闇", "無"];
 
-        for (let i = 1; i <= 450; i++) {
+        for (let i = 1; i <= 1000; i++) {
             const pIdx = Math.floor((i - 1) / baseNames.length) % prefixes.length;
             const bIdx = (i - 1) % baseNames.length;
             const name = `${prefixes[pIdx]}${baseNames[bIdx]}`;
@@ -20,16 +20,16 @@ export const MonsterData = {
                 id: i,
                 name: name,
                 level: i,
-                hp: i * 20,
-                atk: i * 5,
-                def: i * 3,
-                spd: i * 4,
-                exp: i * 15,
-                gold: i * 10,
+                hp: i * 50,
+                atk: i * 8,
+                def: i * 5,
+                spd: i * 6,
+                exp: i * 20,
+                gold: i * 15,
                 color: color,
                 shape: shape,
                 element: element,
-                isBoss: i === 450,
+                isBoss: i === 1000,
                 isDungeonMonster: i > 5
             });
         }

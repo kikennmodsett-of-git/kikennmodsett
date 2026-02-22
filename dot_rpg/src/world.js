@@ -3,68 +3,64 @@ export class World {
         this.game = game;
         this.ui = game.ui;
         this.container = document.getElementById('world-container');
-        this.mapElement = document.getElementById('world-map');
+        this.canvas = document.getElementById('world-map-canvas');
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.playerSprite = document.getElementById('player-sprite');
 
         this.tileSize = 32;
-        this.mapSize = 120; // 120x120へさらに拡大
+        this.mapSize = 500; // 500x500の超巨大マップ (25万タイル)
         this.mapData = [];
+
+        // キャンバスサイズをコンテナに合わせる
+        this.canvas.width = this.container.offsetWidth;
+        this.canvas.height = this.container.offsetHeight;
 
         // 固定オブジェクト（町、ダンジョン）
         this.locations = [
-            {
-                id: 'town_start', name: "始まりの町", x: 10, y: 10, type: 'town',
-                npcs: [
-                    { name: "村長", message: "ようこそ！外の世界は属性相性が重要じゃ。炎は氷に強いぞ。" },
-                    { name: "旅人", message: "パッシブスキルは自動で発動する便利な力だよ。" }
-                ]
-            },
-            {
-                id: 'town_central', name: "中央都市", x: 50, y: 50, type: 'town',
-                npcs: [
-                    { name: "兵士", message: "この先のダンジョンは推奨Lv.90だ。心して行け。" },
-                    { name: "吟遊詩人", message: "光と闇は互いに反発し合う運命にあります..." }
-                ]
-            },
-            {
-                id: 'town_snow', name: "雪原の村", x: 20, y: 80, type: 'town',
-                npcs: [
-                    { name: "老人", message: "ここは常に雪が降っておる。氷の属性に耐性がないと厳しいぞ。" }
-                ]
-            },
-            {
-                id: 'town_desert', name: "砂漠の宿場町", x: 90, y: 20, type: 'town',
-                npcs: [
-                    { name: "商人", message: "灼熱の砂漠へようこそ！炎系統のスキルが大人気です。" }
-                ]
-            },
-            {
-                id: 'town_last_hope', name: "最後の希望の地", x: 100, y: 100, type: 'town',
-                npcs: [
-                    { name: "予言者", message: "ついにここまで来ましたか... 邪悪なる龍の目覚めは近いです。" }
-                ]
-            },
+            { id: 'town_start', name: "始まりの町", x: 10, y: 10, type: 'town', npcs: [{ name: "村長", message: "Canvasの力で世界が500x500に広がったぞ！" }] },
+            { id: 'town_central', name: "メガリス中央都", x: 250, y: 250, type: 'town', npcs: [{ name: "兵士", message: "ここが世界の中心だ。" }] },
+            { id: 'town_snow', name: "凍土の都", x: 50, y: 450, type: 'town', npcs: [{ name: "守り人", message: "北西は常に凍てついている。" }] },
+            { id: 'town_desert', name: "黄金の砂漠都市", x: 450, y: 50, type: 'town', npcs: [{ name: "商人", message: "南東の砂地には金が眠るという。" }] },
+            { id: 'town_volcano', name: "火噴き村", x: 450, y: 450, type: 'town', npcs: [{ name: "職人", message: "南西の火山帯は危険がいっぱいだ。" }] },
+            { id: 'town_islet', name: "孤島のリゾート", x: 50, y: 50, type: 'town', npcs: [{ name: "旅人", message: "この北東の海原を渡ってきたのか？" }] },
+            { id: 'town_forest', name: "巨木の里", x: 120, y: 280, type: 'town', npcs: [{ name: "エルフ", message: "森の囁きを聞くが良い。" }] },
+            { id: 'town_mine', name: "廃鉱の町", x: 380, y: 150, type: 'town', npcs: [{ name: "工夫", message: "この奥には巨大な魔物が..." }] },
+
+            // ダンジョン
             { id: 'dungeon_1', name: "試練の洞窟", x: 15, y: 20, type: 'dungeon', recLv: 5 },
-            { id: 'dungeon_2', name: "魔物の森", x: 45, y: 15, type: 'dungeon', recLv: 25 },
-            { id: 'dungeon_snow', name: "氷結の神殿", x: 25, y: 95, type: 'dungeon', recLv: 50 },
-            { id: 'dungeon_fire', name: "紅蓮の火山", x: 95, y: 30, type: 'dungeon', recLv: 75 },
-            { id: 'dungeon_last', name: "ラストダンジョン", x: 110, y: 110, type: 'dungeon', recLv: 150 }
+            { id: 'dungeon_water', name: "深海神殿", x: 60, y: 40, type: 'dungeon', recLv: 50 },
+            { id: 'dungeon_forest', name: "暗黒樹海", x: 140, y: 300, type: 'dungeon', recLv: 120 },
+            { id: 'dungeon_desert', name: "ピラミッドの迷宮", x: 460, y: 30, type: 'dungeon', recLv: 250 },
+            { id: 'dungeon_snow', name: "絶対零度の獄", x: 30, y: 470, type: 'dungeon', recLv: 400 },
+            { id: 'dungeon_fire', name: "灼熱の終焉", x: 470, y: 470, type: 'dungeon', recLv: 600 },
+            { id: 'dungeon_sky', name: "天空の城", x: 250, y: 10, type: 'dungeon', recLv: 800 },
+            { id: 'dungeon_last', name: "次元の狭間 (Last)", x: 495, y: 495, type: 'dungeon', recLv: 1000 }
         ];
+
+        // 拠点のランダム追加配置を増量
+        for (let i = 1; i <= 35; i++) {
+            const rx = Math.floor(Math.random() * 480) + 10;
+            const ry = Math.floor(Math.random() * 480) + 10;
+            if (!this.locations.find(l => l.x === rx && l.y === ry)) {
+                this.locations.push({
+                    id: `hidden_spot_${i}`, name: `伝説の遺構 #${i}`,
+                    x: rx, y: ry, type: 'dungeon', recLv: 150 + i * 20
+                });
+            }
+        }
+
         this.playerX = 10;
         this.playerY = 10;
-
         this.isMoving = false;
         this.keys = {};
 
         this.initMap();
         this.setupControls();
+        this.render(); // 描画ループ開始
     }
 
     initMap() {
-        this.mapElement.style.gridTemplateColumns = `repeat(${this.mapSize}, ${this.tileSize}px)`;
-        this.mapElement.style.gridTemplateRows = `repeat(${this.mapSize}, ${this.tileSize}px)`;
-
-        // 簡易マップ生成
+        // データ生成のみ
         for (let y = 0; y < this.mapSize; y++) {
             this.mapData[y] = [];
             for (let x = 0; x < this.mapSize; x++) {
@@ -72,26 +68,19 @@ export class World {
                 const loc = this.locations.find(l => l.x === x && l.y === y);
                 if (loc) {
                     type = loc.type;
-                } else if (Math.random() < 0.1) {
-                    type = 'forest';
-                } else if (Math.random() < 0.05) {
-                    type = 'mountain';
+                } else {
+                    // バイオーム設定
+                    if (y > 400 && x < 100) type = 'snow'; // 北西
+                    else if (y < 100 && x > 400) type = 'desert'; // 南東
+                    else if (y > 400 && x > 400) type = 'volcano'; // 南西
+                    else if (Math.random() < 0.1) type = 'forest';
+                    else if (Math.random() < 0.05) type = 'mountain';
+                    else if (Math.random() < 0.02) type = 'water';
                 }
-
-                const tile = document.createElement('div');
-                tile.className = `tile ${type}`;
-                if (loc) {
-                    tile.title = `${loc.name}${loc.recLv ? ` (推奨Lv:${loc.recLv})` : ''}`;
-                    if (loc.type === 'dungeon') tile.innerHTML = '<span class="loc-tag">LV.' + loc.recLv + '</span>';
-                }
-
-                this.mapElement.appendChild(tile);
                 this.mapData[y][x] = type;
             }
         }
-        // プレイヤーのグラフィック強化（CSSクラス名で管理）
         this.playerSprite.className = 'hero-visual';
-        this.updateView();
     }
 
     setupControls() {
@@ -147,22 +136,75 @@ export class World {
     }
 
     updateView() {
-        // プレイヤースプライトの位置を更新
         const containerWidth = this.container.offsetWidth;
         const containerHeight = this.container.offsetHeight;
 
-        const pLeft = this.playerX * this.tileSize;
-        const pTop = this.playerY * this.tileSize;
+        this.pTargetLeft = this.playerX * this.tileSize;
+        this.pTargetTop = this.playerY * this.tileSize;
 
-        const offsetX = (containerWidth / 2) - pLeft - (this.tileSize / 2);
-        const offsetY = (containerHeight / 2) - pTop - (this.tileSize / 2);
+        this.cameraX = (containerWidth / 2) - this.pTargetLeft - (this.tileSize / 2);
+        this.cameraY = (containerHeight / 2) - this.pTargetTop - (this.tileSize / 2);
 
-        this.mapElement.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-        // プレイヤースプライトはコンテナ上の固定位置（中央）にするか、マップ上の絶対座標にするか。
-        // ここではマップと共に動く（transformで補正）
-        this.playerSprite.style.left = `${pLeft}px`;
-        this.playerSprite.style.top = `${pTop}px`;
-        this.playerSprite.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        // スプライトはCSSで動かす（Canvas上ではなくDOMとして重ねる）
+        this.playerSprite.style.left = `${this.pTargetLeft}px`;
+        this.playerSprite.style.top = `${this.pTargetTop}px`;
+        this.playerSprite.style.transform = `translate(${this.cameraX}px, ${this.cameraY}px)`;
+    }
+
+    render() {
+        if (!this.container.classList.contains('hidden')) {
+            this.draw();
+        }
+        requestAnimationFrame(() => this.render());
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        const ts = this.tileSize;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, cw, ch);
+
+        ctx.save();
+        ctx.translate(this.cameraX, this.cameraY);
+
+        // 視野内のタイルのみ描画
+        const startX = Math.max(0, Math.floor(-this.cameraX / ts));
+        const endX = Math.min(this.mapSize, Math.ceil((-this.cameraX + cw) / ts));
+        const startY = Math.max(0, Math.floor(-this.cameraY / ts));
+        const endY = Math.min(this.mapSize, Math.ceil((-this.cameraY + ch) / ts));
+
+        const colors = {
+            grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
+            town: "#a67c52", dungeon: "#331133", snow: "#e0f0ff", desert: "#e6be8a", volcano: "#5a1e1e"
+        };
+
+        for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+                const type = this.mapData[y][x];
+                ctx.fillStyle = colors[type];
+                ctx.fillRect(x * ts, y * ts, ts, ts);
+
+                // 装飾
+                if (type === 'forest') {
+                    ctx.fillStyle = "#142b0d";
+                    ctx.beginPath();
+                    ctx.moveTo(x * ts + ts / 2, y * ts + 5);
+                    ctx.lineTo(x * ts + 5, y * ts + ts - 5);
+                    ctx.lineTo(x * ts + ts - 5, y * ts + ts - 5);
+                    ctx.fill();
+                } else if (type === 'town') {
+                    ctx.strokeStyle = "#5d4037";
+                    ctx.strokeRect(x * ts + 4, y * ts + 4, ts - 8, ts - 8);
+                } else if (type === 'dungeon') {
+                    ctx.strokeStyle = "#ff00ff";
+                    ctx.strokeRect(x * ts + 2, y * ts + 2, ts - 4, ts - 4);
+                }
+            }
+        }
+        ctx.restore();
     }
 
     checkLocation() {
