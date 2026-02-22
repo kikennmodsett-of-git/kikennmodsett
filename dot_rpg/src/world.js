@@ -12,8 +12,20 @@ export class World {
 
         // 固定オブジェクト（町、ダンジョン）
         this.locations = [
-            { id: 'town_start', name: "始まりの町", x: 10, y: 10, type: 'town' },
-            { id: 'town_central', name: "中央都市", x: 35, y: 35, type: 'town' },
+            {
+                id: 'town_start', name: "始まりの町", x: 10, y: 10, type: 'town',
+                npcs: [
+                    { name: "村長", message: "ようこそ！外の世界は属性相性が重要じゃ。炎は氷に強いぞ。" },
+                    { name: "旅人", message: "パッシブスキルは自動で発動する便利な力だよ。" }
+                ]
+            },
+            {
+                id: 'town_central', name: "中央都市", x: 35, y: 35, type: 'town',
+                npcs: [
+                    { name: "兵士", message: "この先のダンジョンは推奨Lv.90だ。心して行け。" },
+                    { name: "吟遊詩人", message: "光と闇は互いに反発し合う運命にあります..." }
+                ]
+            },
             { id: 'dungeon_1', name: "試練の洞窟", x: 15, y: 20, type: 'dungeon', recLv: 5 },
             { id: 'dungeon_2', name: "魔物の森", x: 45, y: 15, type: 'dungeon', recLv: 25 },
             { id: 'dungeon_last', name: "ラストダンジョン", x: 60, y: 60, type: 'dungeon', recLv: 90 }

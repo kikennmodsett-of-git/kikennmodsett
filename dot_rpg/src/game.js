@@ -147,6 +147,16 @@ class Game {
         this.ui.addAction("宿屋 (100G)", () => this.useInn());
         this.ui.addAction("鍛冶屋", () => this.openForge());
         this.ui.addAction("スキル合体所", () => this.openFusionCenter());
+
+        // NPCとの会話
+        if (town.npcs) {
+            town.npcs.forEach(npc => {
+                this.ui.addAction(`${npc.name}と話す`, () => {
+                    this.ui.log(`【${npc.name}】「${npc.message}」`);
+                });
+            });
+        }
+
         this.ui.addAction("出発する", () => this.showMainMap());
     }
 

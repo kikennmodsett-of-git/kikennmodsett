@@ -1,7 +1,7 @@
 export const SkillDB = {
     generateSkills() {
         const skills = [];
-        const elements = ["炎", "氷", "雷", "風", "土", "光", "闇", "無"];
+        const elements = ["炎", "氷", "風", "土", "光", "闇", "無"];
         const types = ["魔法", "剣技", "補助", "聖術", "暗黒技"];
         const rarities = ["コモン", "アンコモン", "レア", "エピック", "レジェンダリー"];
 
@@ -9,24 +9,47 @@ export const SkillDB = {
             const element = elements[i % elements.length];
             const type = types[Math.floor(i / 10) % types.length];
             const rarity = rarities[Math.floor(i / 100) % rarities.length];
+            const cooldown = 1 + Math.floor(i / 100);
 
-            const cooldown = 1 + Math.floor(i / 100); // 最大5ターン程度のCT
+            // パッシブスキルの割合 (20%)
+            const isPassive = i % 5 === 0;
 
             skills.push({
                 id: `skill_${i}`,
-                name: `${element}の${type} Lv.${(i % 10) + 1}`,
-                description: `${element}属性の${type}。威力和特性は熟練度(${rarity})に依存する。`,
+                name: (isPassive ? "心眼・" : "") + `${element}の${type} Lv.${(i % 10) + 1}`,
+                description: isPassive
+                    ? `${element}の力を常に宿す。戦闘中、特定の条件下で自動発動する。`
+                    : `${element}属性の${type}。威力和特性は熟練度(${rarity})に依存する。`,
                 power: 10 + Math.floor(i / 5),
                 type: type,
+                element: element,
+                isPassive: isPassive,
                 rarity: rarity,
-                mpCost: 5 + Math.floor(i / 20),
-                cooldown: cooldown,
+                mpCost: isPassive ? 0 : (5 + Math.floor(i / 20)),
+                cooldown: isPassive ? 0 : cooldown,
                 currentCooldown: 0,
-                // 習得条件
+                // パッシブ発動タイミング
+                trigger: isPassive ? (i % 2 === 0 ? "onTurnEnd" : "onDamageTaken") : null,
                 condition: i % 3 === 0 ? "level" : (i % 3 === 1 ? "quest" : "drop")
             });
         }
         return skills;
+    },
+
+    // 属性相性倍率を取得
+    getElementalMultiplier(atkElement, defElement) {
+        const table = {
+            "炎": { "氷": 1.5, "風": 0.8 },
+            "氷": { "風": 1.5, "土": 0.8 },
+            "風": { "土": 1.5, "炎": 0.8 },
+            "土": { "炎": 1.5, "氷": 0.8 },
+            "光": { "闇": 1.5 },
+            "闇": { "光": 1.5 }
+        };
+        if (table[atkElement] && table[atkElement][defElement]) {
+            return table[atkElement][defElement];
+        }
+        return 1.0;
     },
 
     // 合体用：2つのスキル名を組み合わせて新しい名前を作る

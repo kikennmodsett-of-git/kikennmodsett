@@ -24,7 +24,7 @@ export class Battle {
             <div id="battle-view" style="text-align:center; padding: 20px;">
                 <div class="monster-sprite ${m.shape}" style="background-color: ${m.color}; margin: 0 auto;"></div>
                 <div style="margin-top: 10px; font-weight: bold;">
-                    ${m.name} <br>
+                    ${m.name} [属性:${m.element}] <br>
                     <span style="color: #ff4b2b;">HP: ${m.hp}</span>
                 </div>
             </div>
@@ -47,10 +47,10 @@ export class Battle {
 
     showSkillSelection() {
         this.ui.clearActionPanel();
-        const allSkills = [...this.player.skills, ...this.player.fusedSkills];
+        const allSkills = [...this.player.skills, ...this.player.fusedSkills].filter(s => !s.isPassive);
 
         if (allSkills.length === 0) {
-            this.ui.log("使えるスキルがない！");
+            this.ui.log("使えるアクティブスキルがない！");
             this.playerTurn();
             return;
         }
@@ -71,21 +71,27 @@ export class Battle {
     }
 
     executeSkill(skill) {
-        this.ui.log(`${this.player.name} の ${skill.name}！`);
-        let damage = Math.floor(skill.power * (this.player.stats.attack / 5));
-        damage = Math.max(1, damage - Math.floor(this.monster.def / 2));
+        import('./skill_db.js').then(({ SkillDB }) => {
+            const multiplier = SkillDB.getElementalMultiplier(skill.element, this.monster.element);
+            this.ui.log(`${this.player.name} の ${skill.name}！ (${skill.element}属性)`);
+            if (multiplier > 1.0) this.ui.log("効果はバツグンだ！");
+            if (multiplier < 1.0) this.ui.log("効果はいまひとつのようだ...");
 
-        this.monster.hp -= damage;
-        this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
+            let damage = Math.floor(skill.power * (this.player.stats.attack / 5) * multiplier);
+            damage = Math.max(1, damage - Math.floor(this.monster.def / 2));
 
-        // CT設定
-        skill.currentCooldown = skill.cooldown;
+            this.monster.hp -= damage;
+            this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
 
-        if (this.monster.hp <= 0) {
-            this.win();
-        } else {
-            this.monsterTurn();
-        }
+            // CT設定
+            skill.currentCooldown = skill.cooldown;
+
+            if (this.monster.hp <= 0) {
+                this.win();
+            } else {
+                this.monsterTurn();
+            }
+        });
     }
 
     executeAttack(attacker, target, isPlayer) {
@@ -120,6 +126,9 @@ export class Battle {
     monsterTurn(isDefending = false) {
         if (this.isFinished) return;
 
+        // パッシブ発動チェック: ターン終了時
+        this.triggerPassives("onTurnEnd");
+
         // クールタイム減少
         [...this.player.skills, ...this.player.fusedSkills].forEach(s => {
             if (s.currentCooldown > 0) s.currentCooldown--;
@@ -131,6 +140,10 @@ export class Battle {
 
             this.player.hp -= damage;
             this.ui.log(`${this.monster.name} の攻撃！ ${this.player.name} は ${damage} のダメージを受けた！`);
+
+            // パッシブ発動チェック: ダメージを受けた時
+            this.triggerPassives("onDamageTaken");
+
             this.ui.updateHeader(this.player);
 
             if (this.player.hp <= 0) {
@@ -139,6 +152,19 @@ export class Battle {
                 this.playerTurn();
             }
         }, 500);
+    }
+
+    triggerPassives(trigger) {
+        const passives = [...this.player.skills, ...this.player.fusedSkills].filter(s => s.isPassive && s.trigger === trigger);
+        passives.forEach(s => {
+            this.ui.log(`[パッシブ発動] ${s.name}！`);
+            // 簡易的なパッシブ効果: HPを固定で少し回復する、または次の攻撃力を上げる（メッセージのみ）
+            if (trigger === "onTurnEnd") {
+                const recover = Math.floor(this.player.maxHp * 0.05);
+                this.player.hp = Math.min(this.player.maxHp, this.player.hp + recover);
+                this.ui.log(`体力が ${recover} 回復した。`);
+            }
+        });
     }
 
     win() {
