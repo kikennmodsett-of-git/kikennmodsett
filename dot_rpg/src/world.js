@@ -7,7 +7,7 @@ export class World {
         this.playerSprite = document.getElementById('player-sprite');
 
         this.tileSize = 32;
-        this.mapSize = 70; // 70x70に拡大
+        this.mapSize = 120; // 120x120へさらに拡大
         this.mapData = [];
 
         // 固定オブジェクト（町、ダンジョン）
@@ -20,18 +20,37 @@ export class World {
                 ]
             },
             {
-                id: 'town_central', name: "中央都市", x: 35, y: 35, type: 'town',
+                id: 'town_central', name: "中央都市", x: 50, y: 50, type: 'town',
                 npcs: [
                     { name: "兵士", message: "この先のダンジョンは推奨Lv.90だ。心して行け。" },
                     { name: "吟遊詩人", message: "光と闇は互いに反発し合う運命にあります..." }
                 ]
             },
+            {
+                id: 'town_snow', name: "雪原の村", x: 20, y: 80, type: 'town',
+                npcs: [
+                    { name: "老人", message: "ここは常に雪が降っておる。氷の属性に耐性がないと厳しいぞ。" }
+                ]
+            },
+            {
+                id: 'town_desert', name: "砂漠の宿場町", x: 90, y: 20, type: 'town',
+                npcs: [
+                    { name: "商人", message: "灼熱の砂漠へようこそ！炎系統のスキルが大人気です。" }
+                ]
+            },
+            {
+                id: 'town_last_hope', name: "最後の希望の地", x: 100, y: 100, type: 'town',
+                npcs: [
+                    { name: "予言者", message: "ついにここまで来ましたか... 邪悪なる龍の目覚めは近いです。" }
+                ]
+            },
             { id: 'dungeon_1', name: "試練の洞窟", x: 15, y: 20, type: 'dungeon', recLv: 5 },
             { id: 'dungeon_2', name: "魔物の森", x: 45, y: 15, type: 'dungeon', recLv: 25 },
-            { id: 'dungeon_last', name: "ラストダンジョン", x: 60, y: 60, type: 'dungeon', recLv: 90 }
+            { id: 'dungeon_snow', name: "氷結の神殿", x: 25, y: 95, type: 'dungeon', recLv: 50 },
+            { id: 'dungeon_fire', name: "紅蓮の火山", x: 95, y: 30, type: 'dungeon', recLv: 75 },
+            { id: 'dungeon_last', name: "ラストダンジョン", x: 110, y: 110, type: 'dungeon', recLv: 150 }
         ];
-
-        this.playerX = 10; // 町からスタート
+        this.playerX = 10;
         this.playerY = 10;
 
         this.isMoving = false;
