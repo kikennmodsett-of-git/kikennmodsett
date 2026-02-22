@@ -144,6 +144,9 @@ class Game {
     openTownMenu(town) {
         this.ui.clearActionPanel();
         this.ui.log(`${town.name}に滞在中。`);
+
+        // リスポーン地点の更新確認
+        this.askToUpdateRespawnPoint(town);
         this.ui.addAction("宿屋 (100G)", () => this.useInn());
         this.ui.addAction("鍛冶屋", () => this.openForge());
         this.ui.addAction("スキル合体所", () => this.openFusionCenter());
@@ -216,6 +219,29 @@ class Game {
             this.player.addFusedSkill(newSkill);
             this.ui.log(`合体成功！ 新スキル「${newSkill.name}」を習得！`);
             this.ui.hideModal();
+        }
+    }
+
+    // リスポーン処理
+    respawnPlayer() {
+        const rp = this.player.respawnPoint;
+        this.player.hp = this.player.maxHp;
+        this.world.playerX = rp.x;
+        this.world.playerY = rp.y;
+        this.ui.log(`... ${rp.name} で意識を取り戻した。`);
+        this.ui.updateHeader(this.player);
+        this.showMainMap();
+    }
+
+    // リスポーン地点の更新確認プロンプト
+    askToUpdateRespawnPoint(town) {
+        if (this.player.respawnPoint.name !== town.name) {
+            this.ui.log(`[復活地点] ここを再出発の場所に設定しますか？`);
+            this.ui.addAction("復活地点をここに設定する", () => {
+                this.player.respawnPoint = { x: town.x, y: town.y, name: town.name };
+                this.ui.log(`${town.name} を復活の場所に設定しました。`);
+                this.openTownMenu(town);
+            });
         }
     }
 }

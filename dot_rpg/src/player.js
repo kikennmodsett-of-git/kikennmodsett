@@ -27,6 +27,9 @@ export class Player {
         this.weapon = { name: "ひのきの棒", atk: 2 };
         this.inventory = [];
         this.controlMode = "pc"; // "pc" or "mobile"
+
+        // リスポーン地点 (初期値: 始まりの町)
+        this.respawnPoint = { x: 10, y: 10, name: "始まりの町" };
     }
 
     // 経験値獲得とレベルアップチェック

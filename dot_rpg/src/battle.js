@@ -195,10 +195,13 @@ export class Battle {
 
     lose() {
         this.ui.log(`${this.player.name} は力尽きた...`);
-        this.endBattle("目の前が真っ暗になった。");
-        // デスペナルティなど
-        this.player.hp = this.player.maxHp;
-        this.ui.updateHeader(this.player);
+        this.isFinished = true;
+        this.ui.clearActionPanel();
+        this.ui.log("目の前が真っ暗になった。");
+
+        setTimeout(() => {
+            window.game.respawnPlayer();
+        }, 2000);
     }
 
     endBattle(customMsg) {
