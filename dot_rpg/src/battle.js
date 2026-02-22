@@ -9,72 +9,105 @@ export class Battle {
     }
 
     start() {
+        this.ui.clearActionPanel();
+        this.renderMonster();
         this.ui.log(`${this.monster.name} (Lv.${this.monster.level}) が現れた！`);
 
         // 遭遇時の選択
-        this.ui.clearActionPanel();
         this.ui.addAction("戦う", () => this.initiateBattle());
         this.ui.addAction("逃げる", () => this.executeEscape());
     }
 
+    renderMonster() {
+        const m = this.monster;
+        const html = `
+            <div id="battle-view" style="text-align:center; padding: 20px;">
+                <div class="monster-sprite ${m.shape}" style="background-color: ${m.color}; margin: 0 auto;"></div>
+                <div style="margin-top: 10px; font-weight: bold;">
+                    ${m.name} <br>
+                    <span style="color: #ff4b2b;">HP: ${m.hp}</span>
+                </div>
+            </div>
+        `;
+        this.ui.log(html);
+    }
+
     initiateBattle() {
-        // レベル差チェック (10以上高い場合)
-        if (MonsterData.shouldAskToBattle(this.player.level, this.monster.level)) {
-            this.ui.log("注意：相手はかなりの熟練者だ... 戦いますか？");
-            this.ui.clearActionPanel();
-            this.ui.addAction("戦う", () => this.playerTurn());
-            this.ui.addAction("立ち去る", () => this.endBattle("立ち去りました。"));
-        } else {
-            // 先制攻撃判定 (敏捷が高いほど先制しやすい)
-            const playerFirst = (Math.random() * this.player.stats.agility) > (Math.random() * this.monster.spd);
-            if (playerFirst) {
-                this.ui.log(`${this.player.name} の先制攻撃！`);
-                this.playerTurn();
-            } else {
-                this.ui.log(`${this.monster.name} の先制攻撃！`);
-                this.monsterTurn();
-            }
-        }
+        this.playerTurn();
     }
 
     playerTurn() {
         if (this.isFinished) return;
         this.ui.clearActionPanel();
-        this.ui.addAction("攻撃", () => this.executeAttack(this.player, this.monster, true));
+        this.ui.addAction("通常攻撃", () => this.executeAttack(this.player, this.monster, true));
+        this.ui.addAction("スキル選択", () => this.showSkillSelection());
         this.ui.addAction("防御", () => this.executeDefend());
         this.ui.addAction("逃げる", () => this.executeEscape());
     }
 
-    executeAttack(attacker, target, isPlayer) {
-        // ダメージ計算: (攻撃力 * 2) - 相手の防御力 (最低ダメージ1)
-        let damage = Math.max(1, (attacker === this.player ? this.player.stats.attack : attacker.atk) * 2 - (target === this.player ? this.player.stats.defense : target.def));
+    showSkillSelection() {
+        this.ui.clearActionPanel();
+        const allSkills = [...this.player.skills, ...this.player.fusedSkills];
 
+        if (allSkills.length === 0) {
+            this.ui.log("使えるスキルがない！");
+            this.playerTurn();
+            return;
+        }
+
+        allSkills.forEach(skill => {
+            const ct = skill.currentCooldown || 0;
+            const btnText = ct > 0 ? `${skill.name} (CT:${ct})` : skill.name;
+            this.ui.addAction(btnText, () => {
+                if (ct > 0) {
+                    this.ui.log(`${skill.name} はまだ使えない！ (あと ${ct} ターン)`);
+                    return;
+                }
+                this.executeSkill(skill);
+            });
+        });
+
+        this.ui.addAction("戻る", () => this.playerTurn());
+    }
+
+    executeSkill(skill) {
+        this.ui.log(`${this.player.name} の ${skill.name}！`);
+        let damage = Math.floor(skill.power * (this.player.stats.attack / 5));
+        damage = Math.max(1, damage - Math.floor(this.monster.def / 2));
+
+        this.monster.hp -= damage;
+        this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
+
+        // CT設定
+        skill.currentCooldown = skill.cooldown;
+
+        if (this.monster.hp <= 0) {
+            this.win();
+        } else {
+            this.monsterTurn();
+        }
+    }
+
+    executeAttack(attacker, target, isPlayer) {
+        let damage = Math.max(1, (attacker === this.player ? this.player.stats.attack : attacker.atk) * 2 - (target === this.player ? this.player.stats.defense : target.def));
         target.hp -= damage;
         this.ui.log(`${attacker.name} の攻撃！ ${target.name} に ${damage} のダメージ！`);
 
         if (target.hp <= 0) {
-            if (isPlayer) {
-                this.win();
-            } else {
-                this.lose();
-            }
+            if (isPlayer) this.win();
+            else this.lose();
         } else {
-            if (isPlayer) {
-                this.monsterTurn();
-            } else {
-                this.playerTurn();
-            }
+            if (isPlayer) this.monsterTurn();
+            else this.playerTurn();
         }
     }
 
     executeDefend() {
         this.ui.log(`${this.player.name} は身を固めた！`);
-        // 次のモンスターの攻撃のみダメージを半減させる（簡易実装）
         this.monsterTurn(true);
     }
 
     executeEscape() {
-        // 逃走成功率: (プレイヤー敏捷 / モンスター敏捷) * 50%
         const success = (Math.random() * this.player.stats.agility) > (Math.random() * this.monster.spd * 0.5);
         if (success) {
             this.endBattle("うまく逃げ切れた！");
@@ -86,12 +119,18 @@ export class Battle {
 
     monsterTurn(isDefending = false) {
         if (this.isFinished) return;
+
+        // クールタイム減少
+        [...this.player.skills, ...this.player.fusedSkills].forEach(s => {
+            if (s.currentCooldown > 0) s.currentCooldown--;
+        });
+
         setTimeout(() => {
             let damage = Math.max(1, this.monster.atk * 2 - this.player.stats.defense);
             if (isDefending) damage = Math.floor(damage / 2);
 
             this.player.hp -= damage;
-            this.ui.log(`${this.monster.name} の回避不能な一撃！ ${this.player.name} は ${damage} のダメージを受けた！`);
+            this.ui.log(`${this.monster.name} の攻撃！ ${this.player.name} は ${damage} のダメージを受けた！`);
             this.ui.updateHeader(this.player);
 
             if (this.player.hp <= 0) {

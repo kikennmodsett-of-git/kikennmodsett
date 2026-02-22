@@ -10,6 +10,8 @@ export const SkillDB = {
             const type = types[Math.floor(i / 10) % types.length];
             const rarity = rarities[Math.floor(i / 100) % rarities.length];
 
+            const cooldown = 1 + Math.floor(i / 100); // 最大5ターン程度のCT
+
             skills.push({
                 id: `skill_${i}`,
                 name: `${element}の${type} Lv.${(i % 10) + 1}`,
@@ -18,6 +20,8 @@ export const SkillDB = {
                 type: type,
                 rarity: rarity,
                 mpCost: 5 + Math.floor(i / 20),
+                cooldown: cooldown,
+                currentCooldown: 0,
                 // 習得条件
                 condition: i % 3 === 0 ? "level" : (i % 3 === 1 ? "quest" : "drop")
             });

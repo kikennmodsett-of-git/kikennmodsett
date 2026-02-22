@@ -50,15 +50,38 @@ class Game {
         }
     }
 
-    startRandomBattle() {
+    startRandomBattle(targetLv = null) {
         this.isBattleActive = true;
         this.world.hide();
-        // プレイヤーのレベル付近のモンスターからランダムに選ぶ
-        const range = 5;
-        const minLv = Math.max(1, this.player.level - range);
-        const maxLv = Math.min(450, this.player.level + range + 5);
-        const candidates = this.allMonsters.filter(m => m.level >= minLv && m.level <= maxLv);
-        const monster = candidates[Math.floor(Math.random() * candidates.length)];
+
+        let minLv, maxLv;
+
+        if (targetLv) {
+            // ダンジョンなどの指定レベルがある場合
+            minLv = Math.max(1, targetLv - 2);
+            maxLv = targetLv + 5;
+        } else {
+            // 町(10, 10)からの距離によるレベル調整
+            const startX = 10;
+            const startY = 10;
+            const dist = Math.abs(this.world.playerX - startX) + Math.abs(this.world.playerY - startY);
+
+            // 距離に応じて基本レベルを決定 (町付近は Lv.1〜3)
+            const baseLv = 1 + Math.floor(dist / 3);
+            minLv = Math.max(1, baseLv - 1);
+            maxLv = baseLv + 3;
+
+            // 始まりの町(10, 10)のごく近所(距離5以内)は超安全
+            if (dist < 5) {
+                minLv = 1;
+                maxLv = 3;
+            }
+        }
+
+        const candidates = this.allMonsters.filter(m => m.level >= minLv && m.level <= maxLv && !m.isBoss);
+        const monster = candidates.length > 0
+            ? JSON.parse(JSON.stringify(candidates[Math.floor(Math.random() * candidates.length)])) // インスタンスを壊さないためにコピー
+            : JSON.parse(JSON.stringify(this.allMonsters[0]));
 
         const battle = new Battle(this.player, monster, this.ui);
         battle.start();
