@@ -11,6 +11,13 @@ export class Battle {
     start() {
         this.ui.log(`${this.monster.name} (Lv.${this.monster.level}) が現れた！`);
 
+        // 遭遇時の選択
+        this.ui.clearActionPanel();
+        this.ui.addAction("戦う", () => this.initiateBattle());
+        this.ui.addAction("逃げる", () => this.executeEscape());
+    }
+
+    initiateBattle() {
         // レベル差チェック (10以上高い場合)
         if (MonsterData.shouldAskToBattle(this.player.level, this.monster.level)) {
             this.ui.log("注意：相手はかなりの熟練者だ... 戦いますか？");
@@ -101,7 +108,16 @@ export class Battle {
 
         // レアドロップ判定 (幸運の影響)
         if (Math.random() < (0.05 + this.player.stats.luck * 0.001)) {
-            this.ui.log("お宝を発見！ レアドロップを手に入れた！");
+            this.ui.log("お宝を発見！ レアドロップ(スキル)を手に入れた！");
+            // ランダムなスキル習得
+            const randomSkill = window.game.skillDB[Math.floor(Math.random() * window.game.skillDB.length)];
+            this.player.learnSkill(randomSkill);
+        }
+
+        // ダンジョン内なら低確率で武器を拾う
+        if (this.monster.isDungeonMonster && Math.random() < 0.1) {
+            this.ui.log("なんと、強力な武器を拾った！");
+            this.player.weapon = { name: "ダンジョンの秘剣", atk: this.player.weapon.atk + 3 };
         }
 
         this.player.gold += this.monster.gold;

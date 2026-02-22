@@ -4,12 +4,17 @@ import { MonsterData } from './data/monsters.js';
 import { QuestData } from './data/quests.js';
 import { Battle } from './battle.js';
 import { World } from './world.js';
+import { Inventory } from './inventory.js';
+import { SkillDB } from './skill_db.js';
+import { FusionSystem } from './fusion.js';
 
 class Game {
     constructor() {
         this.player = new Player("勇者");
         this.ui = new UI();
         this.world = new World(this);
+        this.inventory = new Inventory(this.player, this.ui);
+        this.skillDB = SkillDB.generateSkills();
         this.allMonsters = MonsterData.generateMonsters();
         this.allQuests = QuestData.generateQuests();
         this.isLastBossDefeated = false;
@@ -19,12 +24,16 @@ class Game {
     }
 
     init() {
-        this.ui.log("Pixel Adventure へようこそ！");
-        this.ui.log("広大な世界と300のクエスト、400以上の魔物があなたを待っています。");
+        this.ui.log("Pixel Adventure Ver 2.0 へようこそ！");
+        this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
 
-        document.getElementById('btn-status').onclick = () => this.showStatus();
+        // 初期スキル習得
+        this.player.learnSkill(this.skillDB[0]);
+        this.player.learnSkill(this.skillDB[10]);
+
+        document.getElementById('btn-status').onclick = () => this.inventory.showMainMenu();
         document.getElementById('btn-quests').onclick = () => this.showQuests();
-        document.getElementById('btn-shop').onclick = () => this.showShop();
+        document.getElementById('btn-shop').onclick = () => this.ui.log("町の中で施設を利用してください。");
 
         this.showMainMap();
         this.ui.updateHeader(this.player);
@@ -109,14 +118,71 @@ class Game {
         this.ui.showModal(html);
     }
 
-    buyItem(item, cost) {
+    openTownMenu(town) {
+        this.ui.clearActionPanel();
+        this.ui.log(`${town.name}に滞在中。`);
+        this.ui.addAction("宿屋 (100G)", () => this.useInn());
+        this.ui.addAction("鍛冶屋", () => this.openForge());
+        this.ui.addAction("スキル合体所", () => this.openFusionCenter());
+        this.ui.addAction("出発する", () => this.showMainMap());
+    }
+
+    openDungeonMenu(dungeon) {
+        this.ui.clearActionPanel();
+        this.ui.log(`${dungeon.name}の入口。 推奨Lv: ${dungeon.recLv}`);
+        this.ui.addAction("探索する", () => this.enterDungeon(dungeon));
+        this.ui.addAction("立ち去る", () => this.showMainMap());
+    }
+
+    enterDungeon(dungeon) {
+        this.ui.log(`${dungeon.name}を探索している...`);
+        // ダンジョン内ではエンカウント率アップなどの処理
+        setTimeout(() => this.startRandomBattle(dungeon.recLv), 500);
+    }
+
+    openForge() {
+        const cost = this.player.getAdjustedCost(1000);
+        const html = `<h3>鍛冶屋</h3>
+            <p>新しい武器を打つことができます。 (費用: ${cost} G)</p>
+            <button onclick="game.craftWeapon(${cost})">武器を作る</button>`;
+        this.ui.showModal(html);
+    }
+
+    craftWeapon(cost) {
         if (this.player.gold >= cost) {
             this.player.gold -= cost;
-            this.ui.log(`${item} を購入した！`);
+            const newAtk = this.player.weapon.atk + 5;
+            this.player.weapon = { name: "強化された剣", atk: newAtk };
+            this.ui.log(`新しい武器を手に入れた！ (攻撃力 +${newAtk})`);
             this.ui.updateHeader(this.player);
-            this.showShop();
+            this.ui.hideModal();
         } else {
-            this.ui.log("ゴールドが足りません。");
+            this.ui.log("ゴールドが足りない！");
+        }
+    }
+
+    openFusionCenter() {
+        if (this.player.skills.length < 2) {
+            this.ui.log("合体にはスキルが2つ以上必要です。");
+            return;
+        }
+        let html = `<h3>スキル合体所</h3><p>合体させるスキルを選んでください。</p>`;
+        this.player.skills.forEach((s, idx) => {
+            html += `<button onclick="game.selectFusion(${idx})">${s.name}</button> `;
+        });
+        this.ui.showModal(html);
+        this.fusionBuffer = [];
+    }
+
+    selectFusion(idx) {
+        const skill = this.player.skills[idx];
+        this.fusionBuffer.push(skill);
+        this.ui.log(`${skill.name}を選択しました。`);
+        if (this.fusionBuffer.length === 2) {
+            const newSkill = FusionSystem.fuse(this.fusionBuffer[0], this.fusionBuffer[1]);
+            this.player.addFusedSkill(newSkill);
+            this.ui.log(`合体成功！ 新スキル「${newSkill.name}」を習得！`);
+            this.ui.hideModal();
         }
     }
 }

@@ -14,12 +14,19 @@ export class Player {
 
         // 割り振り可能ステータス
         this.stats = {
-            attack: 10,   // 攻撃力: モンスターを倒しやすくなる
-            defense: 10,  // 防御力: 受けるダメージ軽減
-            agility: 10,  // 敏捷: 先制、逃走成功率
-            luck: 10,     // 幸運: レアドロップ率
-            virtue: 10    // 人徳: 価格、施設利用費の割引
+            attack: 10,
+            defense: 10,
+            agility: 10,
+            luck: 10,
+            virtue: 10
         };
+
+        // スキル・装備
+        this.skills = []; // 習得済みスキル
+        this.fusedSkills = []; // 合体で作ったスキル
+        this.weapon = { name: "ひのきの棒", atk: 2 };
+        this.inventory = [];
+        this.controlMode = "pc"; // "pc" or "mobile"
     }
 
     // 経験値獲得とレベルアップチェック
@@ -61,5 +68,18 @@ export class Player {
     getAdjustedCost(baseCost) {
         const discount = this.getDiscountRate();
         return Math.floor(baseCost * (1 - discount));
+    }
+
+    // スキル習得
+    learnSkill(skill) {
+        if (!this.skills.find(s => s.id === skill.id)) {
+            this.skills.push(skill);
+            return true;
+        }
+        return false;
+    }
+
+    addFusedSkill(skill) {
+        this.fusedSkills.push(skill);
     }
 }

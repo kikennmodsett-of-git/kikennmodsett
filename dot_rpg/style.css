@@ -203,28 +203,102 @@ button:active {
 
 .tile.grass {
     background-color: #2d5a27;
-    border: 1px solid #224411;
+    background-image: radial-gradient(#3a6b2f 10%, transparent 10%);
+    background-size: 8px 8px;
 }
 
 .tile.forest {
     background-color: #1a3311;
+    background-image: repeating-linear-gradient(45deg, #224411 0, #224411 2px, transparent 2px, transparent 4px);
 }
 
 .tile.water {
     background-color: #1e3c5a;
+    background-image: linear-gradient(0deg, #1b3652 50%, #1e3c5a 50%);
+    background-size: 100% 4px;
 }
 
 .tile.mountain {
     background-color: #4a4a4a;
+    border: 2px solid #333;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.tile.town {
+    background-color: #a67c52;
+    border: 3px double #fff;
+}
+
+.tile.dungeon {
+    background-color: #331133;
+    border: 2px solid #ff00ff;
+    box-shadow: 0 0 10px #ff00ff;
+}
+
+.loc-tag {
+    font-size: 8px;
+    background: #000;
+    color: #ff0;
+    padding: 1px;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
 }
 
 #player-sprite {
     position: absolute;
-    width: 24px;
-    height: 24px;
-    background-color: #ffcc00;
-    /* 勇者の色 */
-    border: 2px solid #fff;
+    width: 28px;
+    height: 32px;
     z-index: 10;
-    transition: left 0.1s linear, top 0.1s linear;
+    transition: left 0.12s linear, top 0.12s linear;
+}
+
+.hero-visual {
+    background-color: #ffcc00;
+    /* 体 */
+    border-radius: 4px;
+    box-shadow:
+        0 -4px 0 #333,
+        /* 髪 */
+        0 4px 0 #555,
+        /* 足 */
+        -4px 0 0 #005a8a,
+        /* 盾 */
+        8px 0 0 #ccc;
+    /* 剣 */
+    position: relative;
+}
+
+.hero-visual::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 4px;
+    width: 4px;
+    height: 4px;
+    background: #000;
+    box-shadow: 12px 0 0 #000;
+    /* 目 */
+}
+
+/* インベントリ・スキル用スタイル */
+.skill-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.skill-item {
+    background: #2a2a4a;
+    border: 1px solid var(--accent-color);
+    padding: 8px;
+    cursor: pointer;
+    font-size: 10px;
+}
+
+.skill-item:hover {
+    background: var(--hover-color);
 }

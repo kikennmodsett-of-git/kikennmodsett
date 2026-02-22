@@ -20,7 +20,8 @@ export const MonsterData = {
                 spd: i * 4,
                 exp: i * 15,
                 gold: i * 10,
-                isBoss: i === 450
+                isBoss: i === 450,
+                isDungeonMonster: i > 5 // 簡易的にLv5以上をダンジョン判定
             });
         }
         return monsters;
