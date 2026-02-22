@@ -143,8 +143,14 @@ export class World {
     }
 
     updateView() {
-        const containerWidth = this.container.offsetWidth;
-        const containerHeight = this.container.offsetHeight;
+        const containerWidth = this.container.offsetWidth || 800; // フォールバック
+        const containerHeight = this.container.offsetHeight || 300;
+
+        // キャンバスサイズが確定していない場合に更新
+        if (this.canvas.width <= 0) {
+            this.canvas.width = containerWidth;
+            this.canvas.height = containerHeight;
+        }
 
         this.pTargetLeft = this.playerX * this.tileSize;
         this.pTargetTop = this.playerY * this.tileSize;
@@ -177,10 +183,17 @@ export class World {
             for (let x = 0; x < w; x++) {
                 const type = this.mapData[y][x];
                 const colorStr = colors[type];
-                // 簡易色変換
-                const r = parseInt(colorStr.slice(1, 3), 16) || 0;
-                const g = parseInt(colorStr.slice(3, 5), 16) || 0;
-                const b = parseInt(colorStr.slice(5, 7), 16) || 0;
+                // 簡易色変換 (3桁・6桁hex対応)
+                let r, g, b;
+                if (colorStr.length === 4) {
+                    r = parseInt(colorStr[1] + colorStr[1], 16);
+                    g = parseInt(colorStr[2] + colorStr[2], 16);
+                    b = parseInt(colorStr[3] + colorStr[3], 16);
+                } else {
+                    r = parseInt(colorStr.slice(1, 3), 16);
+                    g = parseInt(colorStr.slice(3, 5), 16);
+                    b = parseInt(colorStr.slice(5, 7), 16);
+                }
                 const idx = (y * w + x) * 4;
                 img.data[idx] = r;
                 img.data[idx + 1] = g;
