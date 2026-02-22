@@ -212,13 +212,28 @@ class Game {
 
     selectFusion(idx) {
         const skill = this.player.skills[idx];
+        if (this.fusionBuffer.includes(skill)) {
+            this.ui.log("同じスキルは選べません。");
+            return;
+        }
+
         this.fusionBuffer.push(skill);
-        this.ui.log(`${skill.name}を選択しました。`);
+        this.ui.log(`${skill.name}を選択しました。残り${2 - this.fusionBuffer.length}つ。`);
+
         if (this.fusionBuffer.length === 2) {
-            const newSkill = FusionSystem.fuse(this.fusionBuffer[0], this.fusionBuffer[1]);
-            this.player.addFusedSkill(newSkill);
-            this.ui.log(`合体成功！ 新スキル「${newSkill.name}」を習得！`);
-            this.ui.hideModal();
+            import('./fusion.js').then(({ FusionSystem }) => {
+                const s1 = this.fusionBuffer[0];
+                const s2 = this.fusionBuffer[1];
+                const newSkill = FusionSystem.fuse(s1, s2);
+
+                // 元のスキルを削除
+                this.player.skills = this.player.skills.filter(s => s.id !== s1.id && s.id !== s2.id);
+
+                this.player.addFusedSkill(newSkill);
+                this.ui.log(`合体成功！ 素材は失われたが、新スキル「${newSkill.name}」を習得！`);
+                this.ui.hideModal();
+                this.fusionBuffer = [];
+            });
         }
     }
 
