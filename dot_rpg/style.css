@@ -342,3 +342,56 @@ button:active {
 .skill-item:hover {
     background: var(--hover-color);
 }
+/* モバイル操作パッド */
+#mobile-pad {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.pad-row {
+    display: flex;
+    gap: 5px;
+}
+
+.pad-btn {
+    width: 50px;
+    height: 50px;
+    background-color: rgba(30,30,60,0.8);
+    border: 2px solid var(--accent-color);
+    color: var(--accent-color);
+    font-size: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    touch-action: manipulation;
+}
+
+.pad-btn:active {
+    background-color: var(--accent-color);
+    color: #000;
+}
+
+/* スキル詳細ビュー */
+.skill-detail-view {
+    border: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 15px;
+}
+
+.skill-info p {
+    margin: 5px 0;
+    font-size: 12px;
+}
+
+.skill-desc {
+    font-style: italic;
+    color: #ffd700;
+    margin: 10px 0;
+}
