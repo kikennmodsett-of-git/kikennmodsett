@@ -23,6 +23,10 @@
 
         <main id="game-screen">
             <!-- フィールド、バトル、ショップなどがここに動的に展開される -->
+            <div id="world-container" class="hidden">
+                <div id="world-map"></div>
+                <div id="player-sprite"></div>
+            </div>
             <div id="message-log"></div>
             <div id="action-panel"></div>
         </main>
@@ -44,6 +48,7 @@
     </div>
 
     <script type="module" src="src/game.js"></script>
+    <script type="module" src="src/world.js"></script>
 </body>
 
 </html>

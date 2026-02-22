@@ -124,6 +124,6 @@ export class Battle {
         if (customMsg) this.ui.log(customMsg);
         this.isFinished = true;
         this.ui.clearActionPanel();
-        this.ui.addAction("冒険を続ける", () => window.game.showMainMap());
+        this.ui.addAction("探索に戻る", () => window.game.showMainMap());
     }
 }

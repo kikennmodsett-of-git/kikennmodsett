@@ -3,14 +3,17 @@ import { UI } from './ui.js';
 import { MonsterData } from './data/monsters.js';
 import { QuestData } from './data/quests.js';
 import { Battle } from './battle.js';
+import { World } from './world.js';
 
 class Game {
     constructor() {
         this.player = new Player("勇者");
         this.ui = new UI();
+        this.world = new World(this);
         this.allMonsters = MonsterData.generateMonsters();
         this.allQuests = QuestData.generateQuests();
         this.isLastBossDefeated = false;
+        this.isBattleActive = false;
 
         this.init();
     }
@@ -28,10 +31,10 @@ class Game {
     }
 
     showMainMap() {
+        this.isBattleActive = false;
         this.ui.clearActionPanel();
-        this.ui.log("何をする？");
-        this.ui.addAction("修行に出る (戦闘)", () => this.startRandomBattle());
-        this.ui.addAction("宿屋で休む (100G)", () => this.useInn());
+        this.ui.log("フィールドを探索中... [WASD / 矢印キーで移動]");
+        this.world.show();
 
         if (this.isLastBossDefeated) {
             this.ui.log("世界に平和が訪れたが、冒険はまだ続く...");
@@ -39,6 +42,8 @@ class Game {
     }
 
     startRandomBattle() {
+        this.isBattleActive = true;
+        this.world.hide();
         // プレイヤーのレベル付近のモンスターからランダムに選ぶ
         const range = 5;
         const minLv = Math.max(1, this.player.level - range);
