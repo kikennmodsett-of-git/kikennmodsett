@@ -47,6 +47,17 @@ export class Player {
         this.nextLevelExp = Math.floor(this.nextLevelExp * 1.5);
         this.maxHp += 20;
         this.hp = this.maxHp;
+
+        // 次のレベルで習得可能なスキルがあるかチェック (SkillDBから)
+        // 実装を簡易化するため、window.gameのスキルDBを参照
+        if (window.game && window.game.skillDB) {
+            const newSkills = window.game.skillDB.filter(s => s.condition === "level" && Math.floor(s.power / 2) <= this.level);
+            newSkills.forEach(s => {
+                if (this.learnSkill(s)) {
+                    console.log(`新スキル「${s.name}」を自動習得しました。`);
+                }
+            });
+        }
     }
 
     // ステータス割り振り

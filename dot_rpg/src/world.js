@@ -168,12 +168,54 @@ export class World {
         }
     }
 
+    updateControlMode(mode) {
+        if (mode === "mobile") {
+            this.showMobilePad();
+        } else {
+            this.hideMobilePad();
+        }
+    }
+
+    showMobilePad() {
+        if (!document.getElementById('mobile-pad')) {
+            const pad = document.createElement('div');
+            pad.id = 'mobile-pad';
+            pad.innerHTML = `
+                <button class="pad-btn up" ontouchstart="game.world.handleTouch('w')">↑</button>
+                <div class="pad-row">
+                    <button class="pad-btn left" ontouchstart="game.world.handleTouch('a')">←</button>
+                    <button class="pad-btn down" ontouchstart="game.world.handleTouch('s')">↓</button>
+                    <button class="pad-btn right" ontouchstart="game.world.handleTouch('d')">→</button>
+                </div>
+            `;
+            this.container.appendChild(pad);
+        } else {
+            document.getElementById('mobile-pad').classList.remove('hidden');
+        }
+    }
+
+    hideMobilePad() {
+        const pad = document.getElementById('mobile-pad');
+        if (pad) pad.classList.add('hidden');
+    }
+
+    handleTouch(key) {
+        this.keys[key] = true;
+        this.handleMovement();
+        // すぐにOFFにしないと歩き続けてしまうため、タイマーでリセット
+        setTimeout(() => this.keys[key] = false, 100);
+    }
+
     show() {
         this.container.classList.remove('hidden');
+        if (this.game.player.controlMode === "mobile") {
+            this.showMobilePad();
+        }
         this.updateView();
     }
 
     hide() {
         this.container.classList.add('hidden');
+        this.hideMobilePad();
     }
 }
