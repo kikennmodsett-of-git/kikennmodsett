@@ -6,13 +6,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingSpinner = document.querySelector('.loading-spinner');
     const solutionsContainer = document.getElementById('solutions-container');
 
-    // 解決策のプロンプトデータベース（拡充版）
+    // 解決策のプロンプトデータベース（動的生成対応版）
     const solutionDatabase = {
         'default': [
             { title: '課題の言語化と具体化', summary: 'まず「何が」「どう」困っているかを140文字以内で書き出してください。', detail: '曖昧な不安を具体的な課題に変換することが第一歩です。紙に書き出すことで脳のワーキングメモリが解放され、冷静な判断が可能になります。' },
             { title: 'ポモドーロ・テクニックの導入', summary: '25分間の集中と5分間の休憩を1セットとして、タイマーをセットしてください。', detail: '「全部やる」のではなく「次の25分だけやる」と決めることで、着手ハードルが劇的に下がります。休憩中はスマホを見ず、深呼吸やストレッチを。' },
             { title: '「あえて放置する」戦略', summary: '一度その問題から離れ、15分程度の散歩や仮眠をとってください。', detail: '脳の「デフォルトモードネットワーク」が活性化し、無意識のうちに情報が整理され、新しいアイデアや解決策がひらめきやすくなります。' },
             { title: 'スモールステップの分解', summary: '現在の目標を「5分で終わる作業」まで分解し、その1つ目だけを完了させてください。', detail: '大きな岩を動かすのは大変ですが、小さな石なら投げられます。着手することで、脳内のドーパミンが放出され、自然と次のステップへ進めます。' }
+        ],
+        '料理': [
+            { title: '材料活用：クイック・メイン', summary: '冷蔵庫にあるもので10分で作れる主菜を提案します。', detail: '（動的に生成されます）' },
+            { title: '味付けの黄金比', summary: '失敗しない味付けのパターンを伝授します。', detail: '（動的に生成されます）' },
+            { title: '同時進行のコツ', summary: '洗い物を少なく、効率的に作る手順を構築します。', detail: '（動的に生成されます）' },
+            { title: '盛り付けのワンポイント', summary: '目でも楽しめる、カフェ風の仕上げ方を提案します。', detail: '（動的に生成されます）' }
         ],
         'バグ': [
             { title: 'デバッガーによる一行実行', summary: 'console.logではなく、ブレークポイントを設定して変数の値を1行ずつ追ってください。', detail: 'コードが「自分の思い通り」ではなく「実際にどう動いているか」を直視しましょう。特にループの境界値や、非同期処理の順序に注目です。' },
@@ -25,12 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
             { title: 'コードレビューのセルフ実施', summary: '1時間後に自分のコードを「他人のコード」として、GitHubのPR形式で見直してください。', detail: '書いた直後は気づかない誤字や、冗長なロジック、マジックナンバーの放置などが客観的に見えるようになります。' },
             { title: 'ペアプログラミング / AIメンター', summary: 'AIに対して「このコードの改善提案をして」とプロンプトを入力してください。', detail: '自分一人では思いつかないモダンな書き方や、より効率的なアルゴリズムの提案を受けることができ、学習速度が飛躍的に向上します。' },
             { title: '技術負債の返済タイム設定', summary: '週に1時間、機能追加を一切せず「コードを綺麗にするだけ」の時間を設けてください。', detail: '目先の開発速度を優先しがちですが、定期的なリファクタリングこそが長期的な生産性を最大化する唯一の道です。' }
-        ],
-        '人間関係': [
-            { title: 'アイ・メッセージ（I Message）', summary: '相手を主語にするのではなく「自分は〜と感じている」と伝えてください。', detail: '「あなたは〇〇だ」という決めつけは反発を招きます。「私は〇〇されると悲しい」と主観を伝えることで、攻撃性を抑えた対話が可能になります。' },
-            { title: '期待値の調整', summary: '相手に期待していることを明確に言語化し、必要であればすり合わせを行ってください。', detail: '多くのトラブルは「言わなくてもわかるだろう」という期待のズレから生じます。具体的な期限やクオリティを数字で提示しましょう。' },
-            { title: '境界線の設定（バウンダリー）', summary: '自分が「ここまではするが、ここからはしない」という線引きを明確にしてください。', detail: '他人の問題を自分の問題として抱え込みすぎると共倒れになります。Noと言える勇気が、結果として健全な関係を維持することに繋がります。' },
-            { title: '「今ここでない」感情の切り離し', summary: '今の怒りが過去の誰かへの感情と混ざっていないか、1分間内省してください。', detail: '目の前の相手に、昔の嫌いな人を投影していることがあります。事実と感情を分けることで、冷静な対処がしやすくなります。' }
         ]
     };
 
@@ -56,13 +56,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // 解決策の選定
         let solutions = [...solutionDatabase.default];
 
-        // キーワードマッチングの強化
-        if (trouble.includes('バグ')) {
+        // キーワードマッチングと動的生成
+        if (trouble.includes('料理') || trouble.includes('レシピ') || trouble.includes('食べたい')) {
+            solutions = [...solutionDatabase['料理']];
+
+            // 料理固有のロジック
+            const ingredients = trouble.match(/[、\s]([ぁ-んァ-ヶー一-龠]+)/g)?.map(s => s.trim().replace(/[、\s]/g, '')) || ['卵', 'ネギ', 'ごはん'];
+            const mainIng = ingredients[0] || '卵';
+
+            solutions[0].summary = `【${mainIng}のスピード炒め】${ingredients.join('と')}を強火でさっと炒めるだけで完成です。`;
+            solutions[0].detail = `1. フライパンに油を引き、${mainIng}を投入。<br>2. 他の具材を加え、塩コショウで味を調える。<br>3. 仕上げに醤油をひと回し。`;
+
+            solutions[1].summary = `【黄金比：1:1:1】醤油・みりん・酒を1:1:1で混ぜれば、${mainIng}に合う絶品照り焼きソースになります。`;
+            solutions[1].detail = `この比率は万能です。少し甘めが好きな場合は、砂糖を小さじ1追加してください。`;
+        } else if (trouble.includes('バグ')) {
             solutions = [...solutionDatabase['バグ']];
-        } else if (trouble.includes('プログラミング') || trouble.includes('コード') || trouble.includes('実装')) {
+        } else if (trouble.includes('プログラミング')) {
             solutions = [...solutionDatabase['プログラミング']];
-        } else if (trouble.includes('人') || trouble.includes('関係') || trouble.includes('相談') || trouble.includes('悩み')) {
-            solutions = [...solutionDatabase['人間関係']];
         }
 
         // 対処方針に応じた味付け（擬似AI）
@@ -70,9 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
             solutions = solutions.map(s => {
                 let suffix = '';
                 if (approach.includes('早く') || approach.includes('簡単')) {
-                    suffix = '（※即効性を重視したアドバイスです）';
+                    suffix = '（※効率を重視しました）';
                 } else if (approach.includes('丁寧') || approach.includes('根本')) {
-                    suffix = '（※長期的な視点でのアドバイスです）';
+                    suffix = '（※質を重視しました）';
                 }
                 return {
                     ...s,
@@ -92,12 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
             card.style.animationDelay = `${index * 0.15}s`;
 
             let innerHTML = `
-                <h3><i class="fas fa-check-circle"></i> ${sol.title}</h3>
-                <p><strong>【具体的アクション】</strong><br>${sol.summary}</p>
+                <h3><i class="fas fa-magic"></i> ${sol.title}</h3>
+                <p><strong>【提案】</strong><br>${sol.summary}</p>
             `;
 
             if (depth === 'rich') {
-                innerHTML += `<div class="detail-text"><strong>【解説】</strong><br>${sol.detail}</div>`;
+                innerHTML += `<div class="detail-text"><strong>【具体的な手順】</strong><br>${sol.detail}</div>`;
             }
 
             card.innerHTML = innerHTML;
