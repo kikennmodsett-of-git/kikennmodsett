@@ -62,6 +62,13 @@ export const SkillDB = {
     },
 
     fuseNames(skill1, skill2) {
-        return `禁忌の${skill1.name.substring(5, 7)}${skill2.name.substring(7, 9)}`;
+        // 装飾を除去して核となる名前を抽出する例: "[一般] 虚空を裂く激流の術 +5" -> "激流の術"
+        const extract = (name) => {
+            const match = name.match(/(刻命の剣技|爆炎の魔導|激流の術|大地の断罪|聖天の福音|冥府の呪縛|疾風の乱舞|究極の[^\s+]+)/);
+            return match ? match[1] : name.slice(-5);
+        };
+        const n1 = extract(skill1.name);
+        const n2 = extract(skill2.name);
+        return `${n1.slice(0, 2)}${n2.slice(-2)}`;
     }
 };

@@ -216,21 +216,25 @@ class Game {
     }
 
     openFusionCenter() {
-        if (this.player.skills.length < 2) {
-            this.ui.log("合体にはスキルが2つ以上必要です。");
+        const allSkills = [...this.player.skills, ...this.player.fusedSkills];
+        if (allSkills.length < 2) {
+            this.ui.log("合体にはスキルが計2つ以上必要です。");
             return;
         }
-        let html = `<h3>スキル合体所</h3><p>合体させるスキルを選んでください。</p>`;
-        this.player.skills.forEach((s, idx) => {
-            html += `<button onclick="game.selectFusion(${idx})">${s.name}</button> `;
+        let html = `<h3>禁断のスキル合体所</h3><p>合体させる素材を2つ選んでください。<br>(合体済みスキルも素材にできます)</p>`;
+        allSkills.forEach((s) => {
+            html += `<button onclick="game.selectFusion('${s.id}')" style="margin:2px;">${s.name}</button> `;
         });
         this.ui.showModal(html);
         this.fusionBuffer = [];
     }
 
-    selectFusion(idx) {
-        const skill = this.player.skills[idx];
-        if (this.fusionBuffer.includes(skill)) {
+    selectFusion(skillId) {
+        const allSkills = [...this.player.skills, ...this.player.fusedSkills];
+        const skill = allSkills.find(s => s.id === skillId);
+
+        if (!skill) return;
+        if (this.fusionBuffer.find(s => s.id === skillId)) {
             this.ui.log("同じスキルは選べません。");
             return;
         }
@@ -239,19 +243,18 @@ class Game {
         this.ui.log(`${skill.name}を選択しました。残り${2 - this.fusionBuffer.length}つ。`);
 
         if (this.fusionBuffer.length === 2) {
-            import('./fusion.js').then(({ FusionSystem }) => {
-                const s1 = this.fusionBuffer[0];
-                const s2 = this.fusionBuffer[1];
-                const newSkill = FusionSystem.fuse(s1, s2);
+            const s1 = this.fusionBuffer[0];
+            const s2 = this.fusionBuffer[1];
+            const newSkill = FusionSystem.fuse(s1, s2);
 
-                // 元のスキルを削除
-                this.player.skills = this.player.skills.filter(s => s.id !== s1.id && s.id !== s2.id);
+            // 元のスキルを削除（どちらのリストにあるか不明なので両方から消す）
+            this.player.skills = this.player.skills.filter(s => s.id !== s1.id && s.id !== s2.id);
+            this.player.fusedSkills = this.player.fusedSkills.filter(s => s.id !== s1.id && s.id !== s2.id);
 
-                this.player.addFusedSkill(newSkill);
-                this.ui.log(`合体成功！ 素材は失われたが、新スキル「${newSkill.name}」を習得！`);
-                this.ui.hideModal();
-                this.fusionBuffer = [];
-            });
+            this.player.addFusedSkill(newSkill);
+            this.ui.log(`合体成功！ 新たな絶技「${newSkill.name}」を習得！`);
+            this.ui.hideModal();
+            this.fusionBuffer = [];
         }
     }
 
