@@ -109,23 +109,80 @@ export class World {
             const k = e.key.toLowerCase();
             this.keys[k] = true;
             if (k === 'm') {
-                this.showCurrentLocation();
+                this.toggleFullscreenMap();
             }
             this.handleMovement();
         });
         window.addEventListener('keyup', (e) => {
             this.keys[e.key.toLowerCase()] = false;
         });
+
+        // 閉じるボタンのイベント
+        document.getElementById('fullscreen-map-close').onclick = () => this.toggleFullscreenMap(false);
     }
 
-    showCurrentLocation() {
-        const type = this.mapData[this.playerY][this.playerX];
-        const names = {
-            grass: "平原", forest: "森", water: "水辺", mountain: "岩山",
-            town: "街・村", dungeon: "ダンジョン", snow: "雪原", desert: "砂漠", volcano: "火山地帯"
+    toggleFullscreenMap(force) {
+        const container = document.getElementById('fullscreen-map-container');
+        const isHidden = container.classList.contains('hidden');
+        const target = (force !== undefined) ? !force : isHidden;
+
+        if (target) {
+            container.classList.remove('hidden');
+            this.drawFullscreenMap();
+            // 現在地もログに出す（従来通り）
+            const type = this.mapData[this.playerY][this.playerX];
+            const names = {
+                grass: "平原", forest: "森", water: "水辺", mountain: "岩山",
+                town: "街・村", dungeon: "ダンジョン", snow: "雪原", desert: "砂漠", volcano: "火山地帯"
+            };
+            const typeName = names[type] || "未知の地点";
+            document.getElementById('full-map-coords').textContent = `${typeName} (${this.playerX}, ${this.playerY})`;
+        } else {
+            container.classList.add('hidden');
+        }
+    }
+
+    drawFullscreenMap() {
+        const canvas = document.getElementById('fullscreen-map-canvas');
+        const ctx = canvas.getContext('2d');
+        const size = this.mapSize;
+        canvas.width = size;
+        canvas.height = size;
+
+        // ミニマップと同じ配色を使用
+        const colors = {
+            grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
+            town: "#ff0", dungeon: "#f0f", snow: "#fff", desert: "#e6be8a", volcano: "#a00"
         };
-        const typeName = names[type] || "未知の地点";
-        this.ui.log(`【現在地情報】 ${typeName} (${this.playerX}, ${this.playerY})`);
+
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                ctx.fillStyle = colors[this.mapData[y][x]] || "#000";
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+
+        // 現在地マーカーを大きく描画
+        const pX = this.playerX;
+        const pY = this.playerY;
+
+        // 外枠（白い光）
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(pX, pY, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 中（赤い点）
+        ctx.fillStyle = "#f00";
+        ctx.beginPath();
+        ctx.arc(pX, pY, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // テキストで「YOU」と表示
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 10px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("YOU", pX, pY - 8);
     }
 
     handleMovement() {
@@ -201,8 +258,8 @@ export class World {
         const w = this.minimapCanvas.width = this.mapSize;
         const h = this.minimapCanvas.height = this.mapSize;
 
-        // ミニマップクリックで現在地表示
-        this.minimapCanvas.onclick = () => this.showCurrentLocation();
+        // ミニマップクリックで全画面マップ表示
+        this.minimapCanvas.onclick = () => this.toggleFullscreenMap(true);
 
         const colors = {
             grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",

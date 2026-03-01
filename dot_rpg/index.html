@@ -42,6 +42,20 @@
             <button id="btn-save">セーブ</button>
         </nav>
 
+        <!-- 全画面マップオーバーレイ -->
+        <div id="fullscreen-map-container" class="hidden">
+            <div id="map-header">
+                <h2>ワールドマップ</h2>
+                <button id="fullscreen-map-close">マップを閉じる (M)</button>
+            </div>
+            <div id="map-canvas-wrapper">
+                <canvas id="fullscreen-map-canvas"></canvas>
+            </div>
+            <div id="map-footer">
+                <p>現在地: <span id="full-map-coords">---</span></p>
+            </div>
+        </div>
+
         <!-- モーダルウィンドウ (ステータス割り振りなど) -->
         <div id="modal-container" class="hidden">
             <div id="modal-content">
