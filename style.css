@@ -78,8 +78,8 @@ header {
     font-weight: 700;
     letter-spacing: 1px;
     background: var(--accent-gradient);
-    background-clip: text;
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -276,6 +276,15 @@ header {
     height: 4px;
     background: var(--accent-gradient);
     border-radius: 2px;
+}
+
+.subsection-title {
+    font-size: 1.8rem;
+    margin: 40px 0 20px;
+    padding-left: 15px;
+    border-left: 4px solid var(--accent-color);
+    color: var(--text-primary);
+    font-family: var(--font-main);
 }
 
 /* About Section */

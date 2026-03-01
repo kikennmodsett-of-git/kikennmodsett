@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI解決ツール | kikennmodsett</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Noto+Sans+JP:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="background-animation"></div>
+
+    <div class="container">
+        <header>
+            <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> ポートフォリオへ戻る</a>
+            <h1><i class="fas fa-robot"></i> AI解決ツール</h1>
+            <p>あなたの困りごとをAIが分析し、最適な解決策を提案します。</p>
+        </header>
+
+        <main class="glass-panel">
+            <div class="input-group">
+                <label for="trouble-input"><i class="fas fa-exclamation-circle"></i> 困っていることは何ですか？</label>
+                <textarea id="trouble-input" placeholder="例：プログラミングのバグが直らない、朝起きられない..."></textarea>
+            </div>
+
+            <div class="input-group">
+                <label for="approach-input"><i class="fas fa-magic"></i> どう対処したいですか？（方針）</label>
+                <input type="text" id="approach-input" placeholder="例：手短に解決したい、根本的に改善したい...">
+            </div>
+
+            <div class="options-group">
+                <p class="label-text">解説の詳しさ：</p>
+                <div class="radio-group">
+                    <input type="radio" id="detail-simple" name="explanation-depth" value="simple" checked>
+                    <label for="detail-simple">ざっくり解説</label>
+                    <input type="radio" id="detail-rich" name="explanation-depth" value="rich">
+                    <label for="detail-rich">細かく解説</label>
+                </div>
+            </div>
+
+            <button id="solve-btn" class="primary-btn">解決策を生成する <i class="fas fa-sparkles"></i></button>
+
+            <div id="results-area" class="results-area hidden">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>AIが分析中...</p>
+                </div>
+                <div id="solutions-container">
+                    <!-- 解決策がここに動的に追加される -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
