@@ -4,11 +4,11 @@ export const SkillDB = {
         const types = [
             { name: "刻命の剣技", element: "無", category: "物理" },
             { name: "爆炎の魔導", element: "炎", category: "魔法" },
-            { name: "絶対零度の術", element: "氷", category: "魔法" },
-            { name: "疾風の乱舞", element: "風", category: "魔法" },
+            { name: "激流の術", element: "水", category: "魔法" },
             { name: "大地の断罪", element: "土", category: "魔法" },
             { name: "聖天の福音", element: "光", category: "神聖", healing: true },
-            { name: "冥府の呪縛", element: "闇", category: "魔法" }
+            { name: "冥府の呪縛", element: "闇", category: "魔法" },
+            { name: "疾風の乱舞", element: "風", category: "魔法" }
         ];
         const rarities = ["[一般]", "[上級]", "[秘伝]", "[奥義]", "[神話]"];
 
@@ -50,12 +50,13 @@ export const SkillDB = {
 
     getElementalMultiplier(atkElement, defElement) {
         const table = {
-            "炎": { "氷": 1.8, "風": 0.5 },
-            "氷": { "風": 1.8, "土": 0.5 },
-            "風": { "土": 1.8, "炎": 0.5 },
-            "土": { "炎": 1.8, "氷": 0.5 },
-            "光": { "闇": 2.0 },
-            "闇": { "光": 2.0 }
+            "無": { "風": 1.8 },
+            "風": { "闇": 1.8 },
+            "闇": { "光": 1.8 },
+            "光": { "土": 1.8 },
+            "土": { "水": 1.8 },
+            "水": { "火": 1.8 },
+            "火": { "無": 1.8 }
         };
         return (table[atkElement] && table[atkElement][defElement]) ? table[atkElement][defElement] : 1.0;
     },

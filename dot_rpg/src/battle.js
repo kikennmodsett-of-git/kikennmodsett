@@ -180,18 +180,31 @@ export class Battle {
         this.ui.log(`${this.monster.name} を倒した！`);
         this.ui.log(`${this.monster.exp} の経験値と ${this.monster.gold} G を手に入れた。`);
 
-        // レアドロップ判定 (幸運の影響)
-        if (Math.random() < (0.05 + this.player.stats.luck * 0.001)) {
-            this.ui.log("お宝を発見！ レアドロップ(スキル)を手に入れた！");
-            // ランダムなスキル習得
+        // クエスト進行チェック
+        window.game.allQuests.forEach(q => {
+            if (q.isAccepted && !q.isCompleted && q.targetMonsterLevel === this.monster.level) {
+                q.currentCount++;
+                this.ui.log(`クエスト進行: ${q.title} (${q.currentCount}/${q.requiredCount})`);
+                if (q.currentCount >= q.requiredCount) {
+                    q.isCompleted = true;
+                    this.player.gold += q.rewardGold;
+                    this.player.gainExp(q.rewardExp);
+                    this.ui.log(`【クエスト達成！】報酬 ${q.rewardGold} G と ${q.rewardExp} EXP を獲得した。`);
+                }
+            }
+        });
+
+        // レアドロップ判定 (入手しやすく: 30%)
+        if (Math.random() < (0.3 + this.player.stats.luck * 0.005)) {
+            this.ui.log("お宝を発見！ 新たなスキルを手に入れた！");
             const randomSkill = window.game.skillDB[Math.floor(Math.random() * window.game.skillDB.length)];
             this.player.learnSkill(randomSkill);
         }
 
         // ダンジョン内なら低確率で武器を拾う
-        if (this.monster.isDungeonMonster && Math.random() < 0.1) {
+        if (this.monster.isDungeonMonster && Math.random() < 0.2) {
             this.ui.log("なんと、強力な武器を拾った！");
-            this.player.weapon = { name: "ダンジョンの秘剣", atk: this.player.weapon.atk + 3 };
+            this.player.weapon = { name: "ダンジョンの秘剣", atk: this.player.weapon.atk + 5 };
         }
 
         this.player.gold += this.monster.gold;

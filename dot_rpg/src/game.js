@@ -114,6 +114,7 @@ class Game {
                 <li>敏捷: ${this.player.stats.agility} <button onclick="game.allocate('agility')">+</button></li>
                 <li>幸運: ${this.player.stats.luck} <button onclick="game.allocate('luck')">+</button></li>
                 <li>人徳: ${this.player.stats.virtue} <button onclick="game.allocate('virtue')">+</button></li>
+                <li>最大体力上昇 (+5): ${this.player.stats.hp} <button onclick="game.allocate('hp')">+</button> (現在の最大HP: ${this.player.maxHp})</li>
             </ul>`;
         this.ui.showModal(html);
     }

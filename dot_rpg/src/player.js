@@ -18,7 +18,8 @@ export class Player {
             defense: 10,
             agility: 10,
             luck: 10,
-            virtue: 10
+            virtue: 10,
+            hp: 0
         };
 
         // スキル・装備
@@ -48,7 +49,7 @@ export class Player {
         this.statusPoints += 5;
         this.exp -= this.nextLevelExp;
         this.nextLevelExp = Math.floor(this.nextLevelExp * 1.5);
-        this.maxHp += 20;
+        // 体力は自動では上がらない
         this.hp = this.maxHp;
 
         // 次のレベルで習得可能なスキルがあるかチェック (SkillDBから)
@@ -68,6 +69,11 @@ export class Player {
         if (this.statusPoints > 0 && this.stats.hasOwnProperty(statName)) {
             this.stats[statName]++;
             this.statusPoints--;
+
+            if (statName === 'hp') {
+                this.maxHp += 5;
+                this.hp += 5;
+            }
             return true;
         }
         return false;

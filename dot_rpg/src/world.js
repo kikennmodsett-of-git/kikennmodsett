@@ -106,12 +106,26 @@ export class World {
 
     setupControls() {
         window.addEventListener('keydown', (e) => {
-            this.keys[e.key.toLowerCase()] = true;
+            const k = e.key.toLowerCase();
+            this.keys[k] = true;
+            if (k === 'm') {
+                this.showCurrentLocation();
+            }
             this.handleMovement();
         });
         window.addEventListener('keyup', (e) => {
             this.keys[e.key.toLowerCase()] = false;
         });
+    }
+
+    showCurrentLocation() {
+        const type = this.mapData[this.playerY][this.playerX];
+        const names = {
+            grass: "平原", forest: "森", water: "水辺", mountain: "岩山",
+            town: "街・村", dungeon: "ダンジョン", snow: "雪原", desert: "砂漠", volcano: "火山地帯"
+        };
+        const typeName = names[type] || "未知の地点";
+        this.ui.log(`【現在地情報】 ${typeName} (${this.playerX}, ${this.playerY})`);
     }
 
     handleMovement() {
@@ -186,6 +200,9 @@ export class World {
         const ctx = this.minimapCtx;
         const w = this.minimapCanvas.width = this.mapSize;
         const h = this.minimapCanvas.height = this.mapSize;
+
+        // ミニマップクリックで現在地表示
+        this.minimapCanvas.onclick = () => this.showCurrentLocation();
 
         const colors = {
             grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
