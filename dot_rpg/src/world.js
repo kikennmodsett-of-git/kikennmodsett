@@ -52,42 +52,56 @@ export class World {
 
     initMap() {
         const seeds = [];
-        // 森・山・水の種を各40個ずつ
-        for (let i = 0; i < 120; i++) {
+        for (let i = 0; i < 150; i++) {
             seeds.push({
                 x: Math.floor(Math.random() * this.mapSize),
                 y: Math.floor(Math.random() * this.mapSize),
-                type: i < 40 ? 'forest' : (i < 80 ? 'mountain' : 'water'),
-                radius: 5 + Math.random() * 15
+                type: i < 50 ? 'forest' : (i < 100 ? 'mountain' : 'water'),
+                radius: 8 + Math.random() * 20
             });
         }
 
+        // 拠点の位置をマップに展開（巨大化対応）
         const locMap = new Map();
-        this.locations.forEach(l => locMap.set(`${l.x},${l.y}`, l.type));
+        this.locations.forEach(l => {
+            const size = (l.type === 'town') ? 3 : 1; // 街は3x3
+            const half = Math.floor(size / 2);
+            for (let dy = -half; dy <= half; dy++) {
+                for (let dx = -half; dx <= half; dx++) {
+                    locMap.set(`${l.x + dx},${l.y + dy}`, l.type);
+                }
+            }
+        });
 
         for (let y = 0; y < this.mapSize; y++) {
             this.mapData[y] = [];
             for (let x = 0; x < this.mapSize; x++) {
                 let type = 'grass';
                 const locType = locMap.get(`${x},${y}`);
+
                 if (locType) {
                     type = locType;
                 } else {
-                    // バイオーム境界
-                    if (y < 200) type = 'snow';
-                    else if (y > 800) type = 'volcano';
-                    else if (x > 800) type = 'desert';
-                    else {
-                        // 種に近いかどうかで地形を決定 (クラスタリング)
-                        const s = seeds.find(s => Math.abs(s.x - x) < s.radius && Math.abs(s.y - y) < s.radius);
-                        if (s) type = s.type;
+                    // スタート地点周辺 (半径50) は強制的に平地
+                    const distToStart = Math.sqrt(Math.pow(x - 10, 2) + Math.pow(y - 10, 2));
+                    if (distToStart < 50) {
+                        type = 'grass';
+                    } else {
+                        // バイオーム境界
+                        if (y < 150) type = 'snow';
+                        else if (y > 850) type = 'volcano';
+                        else if (x > 850) type = 'desert';
+                        else {
+                            const s = seeds.find(s => Math.abs(s.x - x) < s.radius && Math.abs(s.y - y) < s.radius);
+                            if (s) type = s.type;
+                        }
                     }
                 }
                 this.mapData[y][x] = type;
             }
         }
         this.playerSprite.className = 'hero-visual';
-        this.drawMinimapBase(); // ミニマップの下地を一回だけ描画
+        this.drawMinimapBase();
     }
 
     setupControls() {
@@ -272,7 +286,12 @@ export class World {
     }
 
     checkLocation() {
-        const loc = this.locations.find(l => l.x === this.playerX && l.y === this.playerY);
+        // 街やダンジョンの判定（中心点からの距離で判定）
+        const loc = this.locations.find(l => {
+            const range = (l.type === 'town') ? 1 : 0; // 街は周囲1タイルも判定内
+            return Math.abs(l.x - this.playerX) <= range && Math.abs(l.y - this.playerY) <= range;
+        });
+
         if (loc) {
             this.ui.log(`「${loc.name}」に到着した。`);
             if (loc.type === 'town') {

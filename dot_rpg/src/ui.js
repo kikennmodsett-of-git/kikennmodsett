@@ -9,7 +9,7 @@ export class UI {
 
     log(message) {
         const div = document.createElement('div');
-        div.textContent = `> ${message}`;
+        div.innerHTML = `> ${message}`;
         this.msgLog.prepend(div);
     }
 

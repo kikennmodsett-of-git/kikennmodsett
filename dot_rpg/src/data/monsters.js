@@ -1,43 +1,37 @@
 export const MonsterData = {
-    // 400種類以上のモンスターを生成する簡易ファクトリ
     generateMonsters() {
         const monsters = [];
-        const baseNames = ["スライム", "ゴブリン", "オーク", "スケルトン", "ドラゴン", "ゴーレム", "キメラ", "ヴァンパイア"];
-        const prefixes = ["迷子の", "怒れる", "古代の", "闇の", "光の", "邪悪な", "守護の", "伝説の"];
-        const colors = ["#ff5555", "#55ff55", "#5555ff", "#ffff55", "#ff55ff", "#55ffff", "#ffffff", "#888888"];
-        const shapes = ["slime", "beast", "ghost", "dragon", "knight"];
+        const baseNames = ["スライム", "ゴブリン", "オーク", "スケルトン", "ワイバーン", "ゴーレム", "キメラ", "ヴァンパイア", "リザード", "ウルフ"];
+        const prefixes = ["迷子の", "怒れる", "古代の", "深淵の", "聖なる", "猛毒の", "呪われた", "伝説の", "虚無の", "紅蓮の"];
+        const shapes = ["slime", "beast", "ghost", "dragon", "knight", "serpent"];
         const elements = ["炎", "氷", "風", "土", "光", "闇", "無"];
 
-        for (let i = 1; i <= 1000; i++) {
-            const pIdx = Math.floor((i - 1) / baseNames.length) % prefixes.length;
-            const bIdx = (i - 1) % baseNames.length;
+        for (let i = 1; i <= 1500; i++) {
+            const pIdx = Math.floor(i / 10) % prefixes.length;
+            const bIdx = i % baseNames.length;
             const name = `${prefixes[pIdx]}${baseNames[bIdx]}`;
-            const color = colors[i % colors.length];
-            const shape = shapes[Math.floor(i / 10) % shapes.length];
-            const element = elements[i % elements.length];
 
             monsters.push({
                 id: i,
                 name: name,
                 level: i,
-                hp: i * 50,
-                atk: i * 8,
-                def: i * 5,
-                spd: i * 6,
-                exp: i * 20,
-                gold: i * 15,
-                color: color,
-                shape: shape,
-                element: element,
-                isBoss: i === 1000,
-                isDungeonMonster: i > 5
+                hp: 30 + i * 45,
+                atk: 5 + i * 7,
+                def: 3 + i * 4,
+                spd: 4 + i * 5,
+                exp: i * 25,
+                gold: i * 20,
+                color: `hsl(${i * 137.5 % 360}, 70%, 50%)`,
+                shape: shapes[i % shapes.length],
+                element: elements[i % elements.length],
+                isBoss: i % 100 === 0,
+                isDungeonMonster: i > 20
             });
         }
         return monsters;
     },
 
-    // レベル差のチェック
     shouldAskToBattle(playerLevel, monsterLevel) {
-        return (monsterLevel - playerLevel) >= 10;
+        return (monsterLevel - playerLevel) >= 15;
     }
 };

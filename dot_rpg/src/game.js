@@ -61,20 +61,21 @@ class Game {
             minLv = Math.max(1, targetLv - 2);
             maxLv = targetLv + 5;
         } else {
-            // 町(10, 10)からの距離によるレベル調整
+            // 中心(10, 10)からの距離によるレベル調整
             const startX = 10;
             const startY = 10;
-            const dist = Math.abs(this.world.playerX - startX) + Math.abs(this.world.playerY - startY);
+            const dist = Math.sqrt(Math.pow(this.world.playerX - startX, 2) + Math.pow(this.world.playerY - startY, 2));
 
-            // 距離に応じて基本レベルを決定 (町付近は Lv.1〜3)
-            const baseLv = 1 + Math.floor(dist / 3);
-            minLv = Math.max(1, baseLv - 1);
-            maxLv = baseLv + 3;
-
-            // 始まりの町(10, 10)のごく近所(距離5以内)は超安全
-            if (dist < 5) {
-                minLv = 1;
-                maxLv = 3;
+            if (dist < 50) {
+                // 平原エリア (Lv.1〜25)
+                const baseLv = 1 + Math.floor(dist / 2);
+                minLv = Math.max(1, baseLv - 2);
+                maxLv = Math.min(25, baseLv + 2);
+            } else {
+                // 平原の外 (Lv.26〜)
+                const baseLv = 26 + Math.floor((dist - 50) / 1.5);
+                minLv = baseLv - 5;
+                maxLv = baseLv + 5;
             }
         }
 
@@ -125,12 +126,24 @@ class Game {
     }
 
     showQuests() {
-        let html = "<h3>クエスト一覧 (上位10件表示)</h3><ul>";
-        this.allQuests.slice(0, 10).forEach(q => {
-            html += `<li>${q.title}: ${q.description} [${q.isCompleted ? '達成' : '未達成'}]</li>`;
+        let html = "<h3>クエスト一覧 (レベル近傍)</h3><ul>";
+        // プレイヤーのレベルに近いクエストを表示
+        const nearbyQuests = this.allQuests.filter(q => Math.abs(q.id - this.player.level) <= 10);
+        nearbyQuests.slice(0, 10).forEach(q => {
+            const status = q.isCompleted ? '【達成！】' : (q.isAccepted ? '【進行中】' : `<button onclick="game.acceptQuest(${q.id})">受注する</button>`);
+            html += `<li style="margin-bottom:10px;">${q.title}: ${q.description}<br>${status}</li>`;
         });
         html += "</ul>";
         this.ui.showModal(html);
+    }
+
+    acceptQuest(questId) {
+        const quest = this.allQuests.find(q => q.id === questId);
+        if (quest) {
+            quest.isAccepted = true;
+            this.ui.log(`クエスト「${quest.title}」を引き受けた！`);
+            this.showQuests();
+        }
     }
 
     showShop() {
@@ -149,6 +162,10 @@ class Game {
         this.askToUpdateRespawnPoint(town);
         this.ui.addAction("宿屋 (100G)", () => this.useInn());
         this.ui.addAction("鍛冶屋", () => this.openForge());
+        this.ui.addAction("ギルド (依頼受諾)", () => {
+            this.ui.log("【ギルド】「お主の腕に見合った依頼があるぞ。」");
+            this.showQuests();
+        });
         this.ui.addAction("スキル合体所", () => this.openFusionCenter());
 
         // NPCとの会話
