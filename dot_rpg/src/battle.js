@@ -72,9 +72,10 @@ export class Battle {
 
     executeSkill(skill) {
         import('./skill_db.js').then(({ SkillDB }) => {
+            const totalStats = this.player.getTotalStats();
             if (skill.healing) {
                 // 回復スキルの処理
-                const recover = Math.floor(skill.power * (this.player.stats.attack / 8) + 10);
+                const recover = Math.floor(skill.power * (totalStats.attack / 8) + 10);
                 this.player.hp = Math.min(this.player.maxHp, this.player.hp + recover);
                 this.ui.log(`${this.player.name} の ${skill.name}！ 体力を ${recover} 回復した。`);
                 this.ui.updateHeader(this.player);
@@ -85,7 +86,7 @@ export class Battle {
                 if (multiplier > 1.0) this.ui.log("効果はバツグンだ！");
                 if (multiplier < 1.0) this.ui.log("効果はいまひとつのようだ...");
 
-                let damage = Math.floor(skill.power * (this.player.stats.attack / 5) * multiplier);
+                let damage = Math.floor(skill.power * (totalStats.attack / 5) * multiplier);
                 damage = Math.max(1, damage - Math.floor(this.monster.def / 2));
 
                 this.monster.hp -= damage;
@@ -104,7 +105,8 @@ export class Battle {
     }
 
     executeAttack(attacker, target, isPlayer) {
-        let damage = Math.max(1, (attacker === this.player ? this.player.stats.attack : attacker.atk) * 2 - (target === this.player ? this.player.stats.defense : target.def));
+        const totalStats = this.player.getTotalStats();
+        let damage = Math.max(1, (attacker === this.player ? totalStats.attack : attacker.atk) * 2 - (target === this.player ? totalStats.defense : target.def));
         target.hp -= damage;
         this.ui.log(`${attacker.name} の攻撃！ ${target.name} に ${damage} のダメージ！`);
 
@@ -123,7 +125,8 @@ export class Battle {
     }
 
     executeEscape() {
-        const success = (Math.random() * this.player.stats.agility) > (Math.random() * this.monster.spd * 0.5);
+        const totalStats = this.player.getTotalStats();
+        const success = (Math.random() * totalStats.agility) > (Math.random() * this.monster.spd * 0.5);
         if (success) {
             this.endBattle("うまく逃げ切れた！");
         } else {
@@ -134,6 +137,7 @@ export class Battle {
 
     monsterTurn(isDefending = false) {
         if (this.isFinished) return;
+        const totalStats = this.player.getTotalStats();
 
         // パッシブ発動チェック: ターン終了時
         this.triggerPassives("onTurnEnd");
@@ -144,7 +148,7 @@ export class Battle {
         });
 
         setTimeout(() => {
-            let damage = Math.max(1, this.monster.atk * 2 - this.player.stats.defense);
+            let damage = Math.max(1, this.monster.atk * 2 - totalStats.defense);
             if (isDefending) damage = Math.floor(damage / 2);
 
             this.player.hp -= damage;
@@ -204,7 +208,7 @@ export class Battle {
         // ダンジョン内なら低確率で武器を拾う
         if (this.monster.isDungeonMonster && Math.random() < 0.2) {
             this.ui.log("なんと、強力な武器を拾った！");
-            this.player.weapon = { name: "ダンジョンの秘剣", atk: this.player.weapon.atk + 5 };
+            this.player.equipment.weapon = { name: "ダンジョンの秘剣", atk: this.player.equipment.weapon.atk + 5 };
         }
 
         this.player.gold += this.monster.gold;

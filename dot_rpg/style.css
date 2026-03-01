@@ -420,7 +420,42 @@ button:active {
     margin: 10px 0;
 }
 
-/* 全画面マップ */
+/* 装備画面 */
+.equip-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.equip-slot-item {
+    background: #2a2a4a;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.equip-slot-item:hover {
+    background: var(--hover-color);
+}
+
+/* ショップ */
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.shop-item {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid var(--border-color);
+    padding: 10px;
+    text-align: center;
+}
+
 #fullscreen-map-container {
     position: absolute;
     top: 0;

@@ -25,7 +25,17 @@ export class Player {
         // スキル・装備
         this.skills = []; // 習得済みスキル
         this.fusedSkills = []; // 合体で作ったスキル
-        this.weapon = { name: "ひのきの棒", atk: 2 };
+
+        // 装備スロットの拡張
+        this.equipment = {
+            weapon: { name: "ひのきの棒", atk: 2 },
+            head: null,
+            chest: null,
+            legs: null,
+            feet: null,
+            waist: null
+        };
+
         this.inventory = [];
         this.controlMode = "pc"; // "pc" or "mobile"
 
@@ -101,5 +111,30 @@ export class Player {
 
     addFusedSkill(skill) {
         this.fusedSkills.push(skill);
+    }
+
+    // 装備による補正を含めた合計ステータスを取得
+    getTotalStats() {
+        const total = { ...this.stats };
+
+        // 武器の攻撃力加算
+        if (this.equipment.weapon) {
+            total.attack += (this.equipment.weapon.atk || 0);
+        }
+
+        // 防具の各部位を合算
+        const slots = ['head', 'chest', 'legs', 'feet', 'waist'];
+        slots.forEach(slot => {
+            const item = this.equipment[slot];
+            if (item && item.stats) {
+                for (const stat in item.stats) {
+                    if (total.hasOwnProperty(stat)) {
+                        total[stat] += item.stats[stat];
+                    }
+                }
+            }
+        });
+
+        return total;
     }
 }

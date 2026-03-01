@@ -147,6 +147,63 @@ class Game {
         }
     }
 
+    openArmorShop() {
+        const townLevel = Math.max(1, this.player.level);
+        const discount = this.player.getDiscountRate();
+
+        const slots = ['head', 'chest', 'legs', 'feet', 'waist'];
+        const slotNames = { head: '頭装備', chest: '胸当て', legs: 'レギンス', feet: 'ブーツ', waist: '腰帯' };
+        const qualities = [
+            { name: "一般", mul: 1, color: "#fff", price: 500 },
+            { name: "上級", mul: 2, color: "#00d4ff", price: 2000 },
+            { name: "伝説", mul: 4, color: "#ffd700", price: 10000 }
+        ];
+
+        let html = `<h3>防具屋</h3><p>最高品質の装備を揃えております。</p><div class="shop-grid">`;
+
+        slots.forEach(slot => {
+            const q = qualities[Math.floor(Math.random() * qualities.length)];
+            const baseStat = Math.floor(townLevel * 0.5 * q.mul) + 2;
+            const price = Math.floor(q.price * (townLevel / 5 + 1) * (1 - discount));
+
+            const armorItem = {
+                type: 'armor',
+                slot: slot,
+                name: `[${q.name}] ${slotNames[slot]}`,
+                stats: { defense: baseStat },
+                price: price,
+                color: q.color
+            };
+
+            if (slot === 'waist') armorItem.stats.luck = Math.floor(baseStat / 2);
+            if (slot === 'feet') armorItem.stats.agility = Math.floor(baseStat / 2);
+
+            html += `
+                <div class="shop-item" style="border: 2px solid ${q.color}; padding: 10px; margin: 5px;">
+                    <strong style="color: ${q.color}">${armorItem.name}</strong><br>
+                    防御+${armorItem.stats.defense} ${armorItem.stats.luck ? ', 幸運+' + armorItem.stats.luck : ''}<br>
+                    価格: ${price} G<br>
+                    <button onclick='game.buyArmor(${JSON.stringify(armorItem)})'>購入</button>
+                </div>
+            `;
+        });
+
+        html += `</div><button onclick="game.ui.hideModal()">店を出る</button>`;
+        this.ui.showModal(html);
+    }
+
+    buyArmor(item) {
+        if (this.player.gold >= item.price) {
+            this.player.gold -= item.price;
+            this.player.inventory.push(item);
+            this.ui.log(`${item.name} を購入しました！ インベントリから装備してください。`);
+            this.ui.updateHeader(this.player);
+            this.openArmorShop();
+        } else {
+            this.ui.log("ゴールドが足りません！");
+        }
+    }
+
     showShop() {
         const itemCost = this.player.getAdjustedCost(500);
         const html = `<h3>ショップ</h3>
@@ -159,10 +216,10 @@ class Game {
         this.ui.clearActionPanel();
         this.ui.log(`${town.name}に滞在中。`);
 
-        // リスポーン地点の更新確認
         this.askToUpdateRespawnPoint(town);
         this.ui.addAction("宿屋 (100G)", () => this.useInn());
-        this.ui.addAction("鍛冶屋", () => this.openForge());
+        this.ui.addAction("武器屋 (鍛冶屋)", () => this.openForge());
+        this.ui.addAction("防具屋", () => this.openArmorShop());
         this.ui.addAction("ギルド (依頼受諾)", () => {
             this.ui.log("【ギルド】「お主の腕に見合った依頼があるぞ。」");
             this.showQuests();
@@ -205,8 +262,8 @@ class Game {
     craftWeapon(cost) {
         if (this.player.gold >= cost) {
             this.player.gold -= cost;
-            const newAtk = this.player.weapon.atk + 5;
-            this.player.weapon = { name: "強化された剣", atk: newAtk };
+            const newAtk = this.player.equipment.weapon.atk + 5;
+            this.player.equipment.weapon = { name: "強化された剣", atk: newAtk };
             this.ui.log(`新しい武器を手に入れた！ (攻撃力 +${newAtk})`);
             this.ui.updateHeader(this.player);
             this.ui.hideModal();

@@ -10,6 +10,7 @@ export class Inventory {
                 <h2>メインメニュー</h2>
                 <div class="inv-tabs">
                     <button onclick="game.inventory.showStats()">ステータス</button>
+                    <button onclick="game.inventory.showEquipScreen()">装備</button>
                     <button onclick="game.inventory.showSkills()">スキル・魔法</button>
                     <button onclick="game.inventory.showSettings()">設定</button>
                 </div>
@@ -22,19 +23,20 @@ export class Inventory {
 
     showStats() {
         const p = this.player;
+        const total = p.getTotalStats();
         const html = `
             <h3>キャラクターステータス</h3>
             <p>レベル: ${p.level} (Next: ${p.nextLevelExp - p.exp})</p>
             <p>HP: ${p.hp} / ${p.maxHp}</p>
-            <p>武器: ${p.weapon.name} (攻撃力 +${p.weapon.atk})</p>
+            <p>武器: ${p.equipment.weapon.name} (攻撃力 +${p.equipment.weapon.atk})</p>
             <hr>
             <p>残りポイント: ${p.statusPoints}</p>
             <ul class="stat-list">
-                <li>攻撃力: ${p.stats.attack} <button onclick="game.inventory.allocate('attack')">+</button></li>
-                <li>防御力: ${p.stats.defense} <button onclick="game.inventory.allocate('defense')">+</button></li>
-                <li>敏捷: ${p.stats.agility} <button onclick="game.inventory.allocate('agility')">+</button></li>
-                <li>幸運: ${p.stats.luck} <button onclick="game.inventory.allocate('luck')">+</button></li>
-                <li>人徳: ${p.stats.virtue} <button onclick="game.inventory.allocate('virtue')">+</button></li>
+                <li>攻撃力: ${total.attack} (基本:${p.stats.attack}) <button onclick="game.inventory.allocate('attack')">+</button></li>
+                <li>防御力: ${total.defense} (基本:${p.stats.defense}) <button onclick="game.inventory.allocate('defense')">+</button></li>
+                <li>敏捷: ${total.agility} (基本:${p.stats.agility}) <button onclick="game.inventory.allocate('agility')">+</button></li>
+                <li>幸運: ${total.luck} (基本:${p.stats.luck}) <button onclick="game.inventory.allocate('luck')">+</button></li>
+                <li>人徳: ${total.virtue} (基本:${p.stats.virtue}) <button onclick="game.inventory.allocate('virtue')">+</button></li>
                 <li>最大体力 (+5): ${p.stats.hp} <button onclick="game.inventory.allocate('hp')">+</button></li>
             </ul>
         `;
@@ -46,6 +48,79 @@ export class Inventory {
             this.showStats();
             this.ui.updateHeader(this.player);
         }
+    }
+
+    showEquipScreen() {
+        const p = this.player;
+        const slots = [
+            { id: 'head', name: '頭装備' },
+            { id: 'chest', name: '胸当て' },
+            { id: 'legs', name: 'レギンス' },
+            { id: 'feet', name: 'ブーツ' },
+            { id: 'waist', name: '腰帯' }
+        ];
+
+        let html = `<h3>装備の変更</h3><div class="equip-grid">`;
+        slots.forEach(slot => {
+            const item = p.equipment[slot.id];
+            const itemName = item ? item.name : "（未装備）";
+            html += `
+                <div class="equip-slot-item" onclick="game.inventory.showEquipCategory('${slot.id}')">
+                    <strong>${slot.name}:</strong> <span>${itemName}</span>
+                </div>
+            `;
+        });
+        html += `</div><button onclick="game.inventory.showStats()">ステータスに戻る</button>`;
+        document.getElementById('inv-content').innerHTML = html;
+    }
+
+    showEquipCategory(slotId) {
+        const p = this.player;
+        // インベントリからそのスロットに合うアイテムを抽出
+        const items = p.inventory.filter(item => item.type === 'armor' && item.slot === slotId);
+
+        let html = `<h3>${slotId.toUpperCase()} の装備品</h3><ul>`;
+        if (items.length === 0) {
+            html += "<p>変更できる装備を持っていません。</p>";
+        } else {
+            items.forEach((item, idx) => {
+                const statsStr = Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', ');
+                html += `<li>
+                    <button onclick="game.inventory.changeEquip('${slotId}', ${idx})">装備する</button> 
+                    ${item.name} (${statsStr})
+                </li>`;
+            });
+        }
+        // 外すボタン
+        html += `<li style="margin-top:10px;"><button onclick="game.inventory.changeEquip('${slotId}', -1)">装備を外す</button></li>`;
+        html += `</ul><button onclick="game.inventory.showEquipScreen()">戻る</button>`;
+        document.getElementById('inv-content').innerHTML = html;
+    }
+
+    changeEquip(slotId, itemIdx) {
+        const p = this.player;
+        const current = p.equipment[slotId];
+
+        // 今の装備をインベントリに戻す (nullでなければ)
+        if (current) {
+            p.inventory.push(current);
+        }
+
+        if (itemIdx === -1) {
+            p.equipment[slotId] = null;
+            this.ui.log(`${slotId} の装備を外しました。`);
+        } else {
+            // インベントリから選んだアイテムを装備
+            const items = p.inventory.filter(item => item.type === 'armor' && item.slot === slotId);
+            const newItem = items[itemIdx];
+            p.equipment[slotId] = newItem;
+            // インベントリから削除
+            p.inventory = p.inventory.filter(it => it !== newItem);
+            this.ui.log(`${newItem.name} を装備しました。`);
+        }
+
+        this.showEquipScreen();
+        this.ui.updateHeader(p);
     }
 
     showSkills() {
