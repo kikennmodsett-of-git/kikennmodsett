@@ -35,6 +35,7 @@ export class Inventory {
                 <li>敏捷: ${p.stats.agility} <button onclick="game.inventory.allocate('agility')">+</button></li>
                 <li>幸運: ${p.stats.luck} <button onclick="game.inventory.allocate('luck')">+</button></li>
                 <li>人徳: ${p.stats.virtue} <button onclick="game.inventory.allocate('virtue')">+</button></li>
+                <li>最大体力 (+5): ${p.stats.hp} <button onclick="game.inventory.allocate('hp')">+</button></li>
             </ul>
         `;
         document.getElementById('inv-content').innerHTML = html;
