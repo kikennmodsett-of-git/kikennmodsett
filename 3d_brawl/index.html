@@ -18,15 +18,45 @@
             <div class="menu-content">
                 <div class="input-group">
                     <input type="text" id="player-name" placeholder="プレイヤー名を入力..." maxlength="10">
-                    <input type="text" id="room-pass" placeholder="ルームパスワード..." maxlength="15">
                 </div>
                 <div class="button-group">
-                    <button id="btn-create" class="btn primary">部屋を作って対戦</button>
+                    <button id="btn-create-mode" class="btn primary">ルームを作る</button>
+                    <button id="btn-join-mode" class="btn primary">ルームに入る</button>
                     <button id="btn-npc" class="btn secondary">NPCと対戦 (ソロ)</button>
                 </div>
                 <div class="instruction">
                     <p>【操作方法】</p>
                     <p>移動: カーソルキー | パンチ: 1キー | キック: 2キー</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ルーム作成設定 -->
+        <div id="setup-menu" class="overlay hidden">
+            <h2 class="sub-logo">CREATE ROOM</h2>
+            <div class="menu-content">
+                <div class="input-group">
+                    <p>他のプレイヤーに共有するパスワードを設定してください：</p>
+                    <input type="text" id="create-pass" placeholder="設定パスワード..." maxlength="15">
+                </div>
+                <div class="button-group">
+                    <button id="btn-do-create" class="btn primary">作成して待機</button>
+                    <button id="btn-setup-back" class="btn secondary">戻る</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ルーム参加設定 -->
+        <div id="join-menu" class="overlay hidden">
+            <h2 class="sub-logo">JOIN ROOM</h2>
+            <div class="menu-content">
+                <div class="input-group">
+                    <p>共有されたパスワードを入力してください：</p>
+                    <input type="text" id="join-pass" placeholder="参加パスワード..." maxlength="15">
+                </div>
+                <div class="button-group">
+                    <button id="btn-do-join" class="btn primary">参加する</button>
+                    <button id="btn-join-back" class="btn secondary">戻る</button>
                 </div>
             </div>
         </div>

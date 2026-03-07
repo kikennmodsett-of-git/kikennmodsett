@@ -460,16 +460,17 @@ function showResult(title, msg) {
 
 // --- Networking (PeerJS) ---
 
-async function startMultiplayer(roomPass, playerName) {
+async function startMultiplayer(mode, roomPass, playerName) {
     const hash = await hashString(roomPass);
     const lobbyId = `3dbrawl_lobby_${hash}`;
-    const myId = `3dbrawl_peer_${hash}_${Math.random().toString(36).substr(2, 5)}`;
+    const myId = mode === 'create' ? lobbyId : `3dbrawl_peer_${hash}_${Math.random().toString(36).substr(2, 5)}`;
 
-    setupPeer(myId, lobbyId, playerName);
+    setupPeer(mode, myId, lobbyId, playerName);
 }
 
-function setupPeer(id, lobbyId, playerName) {
+function setupPeer(mode, id, lobbyId, playerName) {
     if (peer) peer.destroy();
+    isLobby = (mode === 'create');
 
     peer = new Peer(id);
 
@@ -477,13 +478,12 @@ function setupPeer(id, lobbyId, playerName) {
         console.log('Peer ID:', myId);
         addLog(`ネットワークに接続完了: ${playerName}`);
 
-        if (myId !== lobbyId) {
-            // Lobbyに接続を試みる
+        if (mode === 'join') {
+            addLog(`ルーム「${roomPassDisplay}」に接続中...`);
             const conn = peer.connect(lobbyId);
             setupConn(conn);
         } else {
-            isLobby = true;
-            addLog('あなたが部屋のマスターになりました');
+            addLog('部屋を作成完了。待機中です...');
         }
     });
 
@@ -496,13 +496,12 @@ function setupPeer(id, lobbyId, playerName) {
 
     peer.on('error', (err) => {
         console.error('Peer error:', err);
-        if (err.type === 'peer-unavailable' && !isLobby) {
-            // Lobbyが見つからない場合は、自分がLobbyとして再起動
-            console.log('Lobby not found, becoming lobby...');
-            setupPeer(lobbyId, lobbyId, playerName);
-        } else if (err.type === 'unavailable-id') {
-            // Lobby IDが既に取られている場合は通常Peerとして再起動
-            setupPeer(`3dbrawl_peer_${Math.random().toString(36).substr(2, 5)}`, lobbyId, playerName);
+        if (err.type === 'peer-unavailable' && mode === 'join') {
+            alert('ルームが見つかりません。パスワードが正しいか、ホストが作成済みか確認してください。');
+            location.reload();
+        } else if (err.type === 'unavailable-id' && mode === 'create') {
+            alert('このパスワードのルームは既に使用されています。別のパスワードを試してください。');
+            location.reload();
         }
     });
 }
@@ -559,7 +558,7 @@ function handleRemoteSync(senderPeerId, data) {
 }
 
 function syncState(action = 'none') {
-    if (!localPlayer) return;
+    if (!localPlayer || !peer || peer.destroyed) return;
 
     const data = {
         type: 'sync',
@@ -596,42 +595,75 @@ async function hashString(str) {
 }
 
 // --- Menu Events ---
+let roomPassDisplay = "";
+
+function startGame(playerName, npcMode = false) {
+    init();
+    // animate(); // Assuming animate() is not defined or gameLoop is used instead
+    gameActive = true;
+    isNPCMode = npcMode;
+    localPlayer = new Player('local', playerName, 0x00f2ff, true);
+    updateHUD();
+    gameLoop();
+}
+
+// Main Menu
+document.getElementById('btn-create-mode').onclick = () => {
+    const name = document.getElementById('player-name').value;
+    if (!name) return alert('プレイヤー名を入力してください');
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('setup-menu').classList.remove('hidden');
+};
+
+document.getElementById('btn-join-mode').onclick = () => {
+    const name = document.getElementById('player-name').value;
+    if (!name) return alert('プレイヤー名を入力してください');
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('join-menu').classList.remove('hidden');
+};
 
 document.getElementById('btn-npc').onclick = () => {
     const name = document.getElementById('player-name').value || 'Player';
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
 
-    isNPCMode = true;
-    gameActive = true;
-
-    localPlayer = new Player('local', name, 0x00f2ff, true);
+    startGame(name, true);
     npc = new NPC('NPC Enemy');
     npc.group.position.set(5, 0, 5);
-
-    updateHUD();
 };
 
-document.getElementById('btn-create').onclick = () => {
-    const name = document.getElementById('player-name').value || 'Player';
-    const pass = document.getElementById('room-pass').value;
-    if (!pass) {
-        alert('パスワードを入力してください');
-        return;
-    }
+// Sub Menus Back
+document.getElementById('btn-setup-back').onclick = () => {
+    document.getElementById('setup-menu').classList.add('hidden');
+    document.getElementById('main-menu').classList.remove('hidden');
+};
 
-    document.getElementById('main-menu').classList.add('hidden');
+document.getElementById('btn-join-back').onclick = () => {
+    document.getElementById('join-menu').classList.add('hidden');
+    document.getElementById('main-menu').classList.remove('hidden');
+};
+
+// Start Multiplayer Actions
+document.getElementById('btn-do-create').onclick = () => {
+    const name = document.getElementById('player-name').value;
+    const pass = document.getElementById('create-pass').value;
+    if (!pass) return alert('パスワードを設定してください');
+    roomPassDisplay = pass;
+    document.getElementById('setup-menu').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('room-display').innerText = `Room: ${pass} (Host)`;
+    startGame(name);
+    startMultiplayer('create', pass, name);
+};
+
+document.getElementById('btn-do-join').onclick = () => {
+    const name = document.getElementById('player-name').value;
+    const pass = document.getElementById('join-pass').value;
+    if (!pass) return alert('パスワードを入力してください');
+    roomPassDisplay = pass;
+    document.getElementById('join-menu').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
     document.getElementById('room-display').innerText = `Room: ${pass}`;
-
-    gameActive = true;
-    localPlayer = new Player('local', name, 0x00f2ff, true);
-
-    updateHUD();
-    startMultiplayer(pass, name);
-    alert(`部屋「${pass}」を作成/参加しました。他のプレイヤーが同じパスワードで入るのを待ってください。`);
+    startGame(name);
+    startMultiplayer('join', pass, name);
 };
-
-// Start
-init();
-gameLoop();
