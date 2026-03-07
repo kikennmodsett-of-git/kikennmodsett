@@ -16,7 +16,8 @@ const DAMAGE_KICK = 18;
 let scene, camera, renderer, clock;
 let localPlayer, npc;
 let remotePlayers = {}; // peerId -> Player instance
-let peer, conn;
+let connections = {}; // peerId -> Connection instance
+let peer;
 let isNPCMode = false;
 let gameActive = false;
 let keys = {};
@@ -412,16 +413,20 @@ function updateHUD() {
     const list = document.getElementById('player-list');
     list.innerHTML = '';
 
+    // Sort: Local first, then others
     const players = [localPlayer];
     if (isNPCMode && npc) players.push(npc);
-    Object.values(remotePlayers).forEach(p => players.push(p));
+    Object.values(remotePlayers).sort((a, b) => a.id.localeCompare(b.id)).forEach(p => players.push(p));
 
     players.forEach(p => {
         if (!p) return;
         const div = document.createElement('div');
-        div.className = 'player-status';
+        div.className = `player-status ${!p.isLocal && p.id !== 'npc' ? 'remote' : ''}`;
         div.innerHTML = `
-            <div>${p.name}</div>
+            <div style="display:flex; justify-content:space-between; font-weight:bold;">
+                <span>${p.name} ${p.isLocal ? '(YOU)' : ''}</span>
+                <span>${Math.ceil(p.hp)} HP</span>
+            </div>
             <div class="hp-bar-bg">
                 <div class="hp-bar-fill" style="width: ${p.hp}%"></div>
             </div>
@@ -436,6 +441,20 @@ function updateHUD() {
     }
 }
 
+function addLog(msg) {
+    const log = document.getElementById('message-log');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerText = msg;
+    log.appendChild(entry);
+
+    // Auto remove after 5s
+    setTimeout(() => {
+        entry.style.opacity = '0';
+        setTimeout(() => entry.remove(), 500);
+    }, 5000);
+}
+
 function showResult(title, msg) {
     document.getElementById('result-screen').classList.remove('hidden');
     document.getElementById('result-title').innerText = title;
@@ -445,54 +464,79 @@ function showResult(title, msg) {
 // --- Networking (PeerJS) ---
 
 async function startMultiplayer(roomPass, playerName) {
-    // Hash password to get a reliable Peer ID
     const hash = await hashString(roomPass);
-    const myId = `3dbrawl_player_${playerName}_${Math.random().toString(36).substr(2, 5)}`;
-    const roomHostId = `3dbrawl_room_${hash}`;
+    const userId = `${Math.random().toString(36).substr(2, 5)}`;
+    const myFullId = `3dbrawl_${hash}_${userId}`;
+    const roomPrefix = `3dbrawl_${hash}_`;
 
-    peer = new Peer(myId);
+    peer = new Peer(myFullId);
 
     peer.on('open', (id) => {
-        console.log('My Peer ID:', id);
-        joinRoom(roomHostId);
+        console.log('Joined with ID:', id);
+        addLog(`ネットワークに接続しました: ${playerName}`);
+
+        // パスワードが同じ他のPeerを全探索（簡易的なルームロジック）
+        // 実際にはシグナリングサーバーが必要だが、PeerJSのリスト機能を使わずに
+        // ブロードキャスト的な接続（あるいは既知のLobby IDへの接続）を行う
+        // ここでは簡易的に、一定範囲のIDを走査するか、先着1名をLobbyとする
+
+        // 改善案: Lobby IDへ接続を試みる
+        const lobbyId = `${roomPrefix}lobby`;
+        if (id !== lobbyId) {
+            const conn = peer.connect(lobbyId);
+            setupConn(conn);
+        }
     });
 
     peer.on('connection', (c) => {
         setupConn(c);
     });
 
-    // If we are the first one, we become the host (effectively)
-    // In this simple P2P model, everyone tries to connect to the "Host ID"
-}
-
-// For simplicity in this demo, let's use a simpler "Join/Create" logic
-// Real multiplayer logic would need a more complex lobby.
-// Here we'll simulate it by having one "Master" derived from the password.
-
-async function hashString(str) {
-    const msgUint8 = new TextEncoder().encode(str);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substr(0, 16);
-}
-
-function joinRoom(id) {
-    // Attempt connection
-    const conn = peer.connect(id);
-    setupConn(conn);
+    peer.on('error', (err) => {
+        if (err.type === 'peer-unavailable') {
+            // もしLobbyがいないなら、自分がLobbyになる（リトライ）
+            if (peer.id.endsWith('_lobby')) return;
+            peer.destroy();
+            peer = new Peer(`${roomPrefix}lobby`);
+            peer.on('open', (id) => {
+                console.log('You are the Lobby master');
+                addLog('あなたが部屋のマスターになりました');
+                peer.on('connection', (c) => setupConn(c));
+            });
+        }
+    });
 }
 
 function setupConn(c) {
+    c.on('open', () => {
+        connections[c.peer] = c;
+        addLog(`プレイヤーが参加しました`);
+        // 初回同期用に自分の情報を送る
+        syncState('join');
+    });
+
     c.on('data', (data) => {
         if (data.type === 'sync') {
             handleRemoteSync(c.peer, data);
         }
     });
+
+    c.on('close', () => {
+        addLog(`プレイヤーが退出しました`);
+        if (remotePlayers[c.peer]) {
+            scene.remove(remotePlayers[c.peer].group);
+            delete remotePlayers[c.peer];
+        }
+        delete connections[c.peer];
+        updateHUD();
+    });
 }
 
 function handleRemoteSync(id, data) {
     if (!remotePlayers[id]) {
-        remotePlayers[id] = new Player(id, data.name, 0x00ff88);
+        remotePlayers[id] = new Player(id, data.name || 'Unknown', 0xff00ea);
+        addLog(`${data.name || '対戦相手'} が参戦しました！`);
+        updateHUD();
     }
     const p = remotePlayers[id];
     p.group.position.set(data.x, data.y, data.z);
@@ -500,12 +544,14 @@ function handleRemoteSync(id, data) {
     p.hp = data.hp;
     if (data.action === 'punch') p.punch();
     if (data.action === 'kick') p.kick();
+    p.isWalking = data.isWalking;
     updateHUD();
 }
 
 function syncState(action = 'none') {
-    if (!conn) return;
-    conn.send({
+    if (Object.keys(connections).length === 0) return;
+
+    const data = {
         type: 'sync',
         name: localPlayer.name,
         x: localPlayer.group.position.x,
@@ -513,8 +559,20 @@ function syncState(action = 'none') {
         z: localPlayer.group.position.z,
         ry: localPlayer.group.rotation.y,
         hp: localPlayer.hp,
+        isWalking: localPlayer.isWalking,
         action: action
+    };
+
+    Object.values(connections).forEach(c => {
+        if (c.open) c.send(data);
     });
+}
+
+async function hashString(str) {
+    const msgUint8 = new TextEncoder().encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substr(0, 16);
 }
 
 // --- Menu Events ---
@@ -549,11 +607,9 @@ document.getElementById('btn-create').onclick = () => {
     gameActive = true;
     localPlayer = new Player('local', name, 0x00f2ff, true);
 
-    // PeerJS logic would go here
-    // startMultiplayer(pass, name);
-
     updateHUD();
-    alert('オンライン対戦機能はPeerJSのセットアップが必要ですが、基盤ロジックは実装済みです。現在はNPC戦もしくはこの画面でのソロ動作を確認できます。');
+    startMultiplayer(pass, name);
+    alert(`部屋「${pass}」を作成/参加しました。他のプレイヤーが同じパスワードで入るのを待ってください。`);
 };
 
 // Start
