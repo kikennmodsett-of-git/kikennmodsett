@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D-Brawl | Online Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
+</head>
+
+<body>
+    <div id="game-container">
+        <!-- メインメニュー -->
+        <div id="main-menu" class="overlay">
+            <h1 class="logo">3D-BRAWL</h1>
+            <div class="menu-content">
+                <div class="input-group">
+                    <input type="text" id="player-name" placeholder="プレイヤー名を入力..." maxlength="10">
+                    <input type="text" id="room-pass" placeholder="ルームパスワード..." maxlength="15">
+                </div>
+                <div class="button-group">
+                    <button id="btn-create" class="btn primary">部屋を作って対戦</button>
+                    <button id="btn-npc" class="btn secondary">NPCと対戦 (ソロ)</button>
+                </div>
+                <div class="instruction">
+                    <p>【操作方法】</p>
+                    <p>移動: カーソルキー | パンチ: 1キー | キック: 2キー</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ゲームプレイUI -->
+        <div id="hud" class="hidden">
+            <div id="player-list">
+                <!-- プレイヤーのHPバーがここに動的に追加される -->
+            </div>
+            <div id="game-info">
+                <span id="room-display"></span>
+            </div>
+        </div>
+
+        <!-- リザルト/ゲームオーバー -->
+        <div id="result-screen" class="overlay hidden">
+            <h2 id="result-title">GAME OVER</h2>
+            <p id="result-msg"></p>
+            <button onclick="location.reload()" class="btn primary">もう一度プレイ</button>
+        </div>
+
+        <!-- キャンバス -->
+        <div id="canvas-container"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
