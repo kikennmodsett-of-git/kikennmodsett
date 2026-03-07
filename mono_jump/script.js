@@ -319,6 +319,9 @@ function gameLoop() {
 }
 
 function update() {
+    // 状態のリセット
+    player.onWall = null;
+
     // 左右移動
     if (keys['ArrowLeft'] || keys['KeyA']) {
         player.vx -= ACCEL;
@@ -351,13 +354,16 @@ function update() {
     // ジャンプ処理
     const jumpKey = keys['ArrowUp'] || keys['KeyW'] || keys['Space'];
     if (jumpKey) {
-        if (canJump) {
-            if (player.onGround) {
+        if (player.onGround) {
+            if (canJump) {
                 player.vy = JUMP_FORCE;
                 player.onGround = false;
                 canJump = false;
-            } else if (player.onWall) {
-                // 壁ジャンプ
+            }
+        } else if (player.onWall) {
+            // 壁アクション: オートジャンプを許可し、連続的な登りを可能にする
+            // 落下し始め(vy >= 0)か、ボタンの押し直し(canJump)で発動
+            if (canJump || player.vy >= 0) {
                 player.vy = WALL_JUMP_FORCE_Y;
 
                 // 駆け上がりの判定: 接触している壁の方向にキーを押し続けているか
@@ -365,12 +371,11 @@ function update() {
                     (player.onWall === 'right' && (keys['ArrowRight'] || keys['KeyD']));
 
                 if (pressingAgainstWall) {
-                    // 駆け上がり: ほとんど垂直に飛ぶが、わずかに壁に押し付けることで連続ジャンプを容易にする
-                    player.vx = (player.onWall === 'left' ? -2 : 2);
+                    // 駆け上がり: 壁側にわずかに押し付けながら飛ぶことで、次のジャンプに繋げやすくする
+                    player.vx = (player.onWall === 'left' ? -1 : 1);
                 } else {
                     // 壁キック: 反対方向に大きく飛ぶ
                     player.vx = (player.onWall === 'left' ? WALL_JUMP_FORCE_X : -WALL_JUMP_FORCE_X);
-                    // 以前の player.onWall = null; は不要 (checkCollisionで毎フレームリセットされるため)
                 }
                 canJump = false;
             }
@@ -382,7 +387,6 @@ function update() {
 
 function checkCollision(axis) {
     const stage = STAGES[currentStage];
-    player.onWall = null;
 
     const left = Math.floor(player.x / TILE_SIZE);
     const right = Math.floor((player.x + player.width) / TILE_SIZE);
@@ -412,12 +416,18 @@ function checkCollision(axis) {
 
                     if (tile === '#') {
                         if (axis === 'x') {
-                            if (player.vx > 0 || (isPushingRight && !player.onGround)) {
+                            if (player.vx > 0) {
                                 player.x = col * TILE_SIZE - player.width;
                                 if (!player.onGround) player.onWall = 'right';
-                            } else if (player.vx < 0 || (isPushingLeft && !player.onGround)) {
+                            } else if (player.vx < 0) {
                                 player.x = (col + 1) * TILE_SIZE;
                                 if (!player.onGround) player.onWall = 'left';
+                            } else {
+                                // 速度が0でも接触していれば壁判定を行う（壁ずり等用）
+                                if (!player.onGround) {
+                                    if (player.x < col * TILE_SIZE) player.onWall = 'right';
+                                    if (player.x > col * TILE_SIZE) player.onWall = 'left';
+                                }
                             }
                             player.vx = 0;
                         } else {
