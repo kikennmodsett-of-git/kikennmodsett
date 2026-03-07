@@ -20,6 +20,7 @@ let peer, conn;
 let isNPCMode = false;
 let gameActive = false;
 let keys = {};
+let obstacles = []; // 衝突判定用の障害物リスト
 
 // --- Classes ---
 
@@ -71,6 +72,7 @@ class Player {
 
         this.lastAttackTime = 0;
         this.action = 'idle';
+        this.actionPhase = 0; // アニメーションの進行度
         this.actionTimer = 0;
     }
 
@@ -96,30 +98,68 @@ class Player {
     update(dt) {
         if (this.hp <= 0) return;
 
+        // アニメーションのリセット
+        this.head.position.y = 1.6;
+        this.body.rotation.y = 0;
+        this.group.position.y = 0;
+
         // Animations based on action
         if (this.action === 'punch') {
-            this.armR.rotation.x = -Math.PI / 2;
             this.actionTimer -= dt;
-            if (this.actionTimer <= 0) this.action = 'idle';
+            const progress = 1 - (this.actionTimer / 0.3); // 0 to 1
+
+            if (progress < 0.4) { // 振りかぶり
+                this.armR.rotation.x = progress * 2;
+                this.body.rotation.y = -progress * 0.5;
+            } else if (progress < 0.7) { // 突き
+                this.armR.rotation.x = -Math.PI / 2 - (progress - 0.4) * 2;
+                this.body.rotation.y = (progress - 0.4) * 2;
+                this.armR.position.z = (progress - 0.4) * 1.5;
+            } else { // 戻し
+                this.armR.rotation.x = -Math.PI / 2 + (progress - 0.7) * 3;
+                this.armR.position.z = 0.45 - (progress - 0.7) * 1.5;
+            }
+
+            if (this.actionTimer <= 0) {
+                this.action = 'idle';
+                this.armR.position.z = 0;
+                this.armR.rotation.x = 0;
+            }
         } else if (this.action === 'kick') {
-            this.legR.rotation.x = -Math.PI / 3;
             this.actionTimer -= dt;
-            if (this.actionTimer <= 0) this.action = 'idle';
+            const progress = 1 - (this.actionTimer / 0.4);
+
+            if (progress < 0.3) { // タメ
+                this.legR.rotation.x = -progress * 2;
+                this.group.position.y = -progress * 0.2; // 少し腰を落とす
+            } else if (progress < 0.8) { // 蹴り
+                this.legR.rotation.x = -Math.PI / 1.5;
+                this.body.rotation.y = -progress * 0.3;
+            } else { // 戻し
+                this.legR.rotation.x = -Math.PI / 1.5 + (progress - 0.8) * 5;
+            }
+
+            if (this.actionTimer <= 0) {
+                this.action = 'idle';
+                this.legR.rotation.x = 0;
+                this.group.position.y = 0;
+            }
         } else {
-            // Idle/Walk animation (bobbing)
-            const walkCycle = Math.sin(Date.now() * 0.01);
-            this.armR.rotation.x = 0;
-            this.legR.rotation.x = 0;
+            // Idle/Walk animation
+            const walkCycle = Math.sin(Date.now() * 0.012);
             if (this.isWalking) {
-                this.legL.rotation.x = walkCycle * 0.5;
-                this.legR.rotation.x = -walkCycle * 0.5;
+                this.legL.rotation.x = walkCycle * 0.7;
+                this.legR.rotation.x = -walkCycle * 0.7;
                 this.armL.rotation.x = -walkCycle * 0.5;
                 this.armR.rotation.x = walkCycle * 0.5;
+                this.group.position.y = Math.abs(walkCycle) * 0.1;
+                this.body.rotation.z = walkCycle * 0.05;
             } else {
                 this.legL.rotation.x = 0;
                 this.legR.rotation.x = 0;
                 this.armL.rotation.x = 0;
                 this.armR.rotation.x = 0;
+                this.group.position.y = Math.sin(Date.now() * 0.003) * 0.05;
             }
         }
     }
@@ -129,17 +169,38 @@ class Player {
         this.action = 'punch';
         this.actionTimer = 0.3;
         this.lastAttackTime = Date.now();
-        this.checkHit(1.5, DAMAGE_PUNCH);
+
+        // 攻撃時の踏み込み（障害物判定を考慮）
+        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.group.quaternion);
+        const nextPos = this.group.position.clone().add(forward.multiplyScalar(0.5));
+        if (!this.checkObstacles(nextPos)) {
+            this.group.position.add(forward.multiplyScalar(0.2));
+        }
+
+        this.checkHit(1.8, DAMAGE_PUNCH);
         if (this.isLocal) syncState('punch');
     }
 
     kick() {
-        if (Date.now() - this.lastAttackTime < ATTACK_COOLDOWN) return;
+        if (Date.now() - this.lastAttackTime < ATTACK_COOLDOWN + 200) return;
         this.action = 'kick';
-        this.actionTimer = 0.3;
+        this.actionTimer = 0.4;
         this.lastAttackTime = Date.now();
-        this.checkHit(1.8, DAMAGE_KICK);
+        this.checkHit(2.2, DAMAGE_KICK);
         if (this.isLocal) syncState('kick');
+    }
+
+    checkObstacles(pos) {
+        // キャラクターの衝突半径
+        const radius = 0.5;
+        for (let obj of obstacles) {
+            const box = new THREE.Box3().setFromObject(obj);
+            // 簡易的な円と矩形の衝突判定
+            const closestPoint = new THREE.Vector3().copy(pos).clamp(box.min, box.max);
+            const dist = pos.distanceTo(closestPoint);
+            if (dist < radius) return true;
+        }
+        return false;
     }
 
     checkHit(range, damage) {
@@ -200,8 +261,17 @@ class NPC extends Player {
         if (dist > 1.5) {
             // Chase
             this.group.lookAt(localPlayer.group.position.x, 0, localPlayer.group.position.z);
-            this.group.translateZ(MOVE_SPEED * 0.7);
-            this.isWalking = true;
+
+            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.group.quaternion);
+            const nextPos = this.group.position.clone().add(forward.multiplyScalar(MOVE_SPEED * 0.7));
+
+            if (!this.checkObstacles(nextPos)) {
+                this.group.position.copy(nextPos);
+                this.isWalking = true;
+            } else {
+                // 障害物がある場合は少し横にずれるなど、スタック回避の余地があるが今は停止
+                this.isWalking = false;
+            }
         } else {
             // Attack
             this.isWalking = false;
@@ -251,7 +321,8 @@ function init() {
     scene.add(floor);
 
     // Obstacles
-    for (let i = 0; i < 15; i++) {
+    obstacles = [];
+    for (let i = 0; i < 20; i++) {
         const size = 1 + Math.random() * 3;
         const box = new THREE.Mesh(
             new THREE.BoxGeometry(size, size, size),
@@ -263,6 +334,7 @@ function init() {
             (Math.random() - 0.5) * 40
         );
         scene.add(box);
+        obstacles.push(box);
     }
 
     window.addEventListener('resize', onWindowResize);
@@ -296,13 +368,21 @@ function handleInput() {
     if (!localPlayer || localPlayer.hp <= 0) return;
 
     let moved = false;
+    const nextPos = localPlayer.group.position.clone();
+
     if (keys['ArrowUp']) {
-        localPlayer.group.translateZ(MOVE_SPEED);
+        nextPos.add(new THREE.Vector3(0, 0, MOVE_SPEED).applyQuaternion(localPlayer.group.quaternion));
         moved = true;
     }
     if (keys['ArrowDown']) {
-        localPlayer.group.translateZ(-MOVE_SPEED);
+        nextPos.add(new THREE.Vector3(0, 0, -MOVE_SPEED).applyQuaternion(localPlayer.group.quaternion));
         moved = true;
+    }
+
+    if (moved) {
+        if (!localPlayer.checkObstacles(nextPos)) {
+            localPlayer.group.position.copy(nextPos);
+        }
     }
     if (keys['ArrowLeft']) {
         localPlayer.group.rotation.y += ROTATION_SPEED;
