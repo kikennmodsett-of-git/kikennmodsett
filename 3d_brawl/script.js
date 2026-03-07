@@ -12,19 +12,16 @@ const ATTACK_COOLDOWN = 500; // ms
 const DAMAGE_PUNCH = 10;
 const DAMAGE_KICK = 18;
 
-// --- Globals ---
 let scene, camera, renderer, clock;
 let localPlayer, npc;
 let remotePlayers = {}; // peerId -> Player instance
 let connections = {}; // peerId -> Connection instance
 let peer;
+let isLobby = false; // Lobby(Host)かどうかのフラグ
 let isNPCMode = false;
 let gameActive = false;
 let keys = {};
 let obstacles = []; // 衝突判定用の障害物リスト
-
-// --- Classes ---
-
 class Player {
     constructor(id, name, color, isLocal = false) {
         this.id = id;
@@ -465,44 +462,47 @@ function showResult(title, msg) {
 
 async function startMultiplayer(roomPass, playerName) {
     const hash = await hashString(roomPass);
-    const userId = `${Math.random().toString(36).substr(2, 5)}`;
-    const myFullId = `3dbrawl_${hash}_${userId}`;
-    const roomPrefix = `3dbrawl_${hash}_`;
+    const lobbyId = `3dbrawl_lobby_${hash}`;
+    const myId = `3dbrawl_peer_${hash}_${Math.random().toString(36).substr(2, 5)}`;
 
-    peer = new Peer(myFullId);
+    setupPeer(myId, lobbyId, playerName);
+}
 
-    peer.on('open', (id) => {
-        console.log('Joined with ID:', id);
-        addLog(`ネットワークに接続しました: ${playerName}`);
+function setupPeer(id, lobbyId, playerName) {
+    if (peer) peer.destroy();
 
-        // パスワードが同じ他のPeerを全探索（簡易的なルームロジック）
-        // 実際にはシグナリングサーバーが必要だが、PeerJSのリスト機能を使わずに
-        // ブロードキャスト的な接続（あるいは既知のLobby IDへの接続）を行う
-        // ここでは簡易的に、一定範囲のIDを走査するか、先着1名をLobbyとする
+    peer = new Peer(id);
 
-        // 改善案: Lobby IDへ接続を試みる
-        const lobbyId = `${roomPrefix}lobby`;
-        if (id !== lobbyId) {
+    peer.on('open', (myId) => {
+        console.log('Peer ID:', myId);
+        addLog(`ネットワークに接続完了: ${playerName}`);
+
+        if (myId !== lobbyId) {
+            // Lobbyに接続を試みる
             const conn = peer.connect(lobbyId);
             setupConn(conn);
+        } else {
+            isLobby = true;
+            addLog('あなたが部屋のマスターになりました');
         }
     });
 
     peer.on('connection', (c) => {
         setupConn(c);
+        if (isLobby) {
+            addLog(`新しいプレイヤーが接続しました`);
+        }
     });
 
     peer.on('error', (err) => {
-        if (err.type === 'peer-unavailable') {
-            // もしLobbyがいないなら、自分がLobbyになる（リトライ）
-            if (peer.id.endsWith('_lobby')) return;
-            peer.destroy();
-            peer = new Peer(`${roomPrefix}lobby`);
-            peer.on('open', (id) => {
-                console.log('You are the Lobby master');
-                addLog('あなたが部屋のマスターになりました');
-                peer.on('connection', (c) => setupConn(c));
-            });
+        console.error('Peer error:', err);
+        if (err.type === 'peer-unavailable' && !isLobby) {
+            // Lobbyが見つからない場合は、自分がLobbyとして再起動
+            console.log('Lobby not found, becoming lobby...');
+            setupPeer(lobbyId, lobbyId, playerName);
+        } else if (err.type === 'unavailable-id') {
+            // Lobby IDが既に取られている場合は通常Peerとして再起動
+            setupPeer(`3dbrawl_peer_${Math.random().toString(36).substr(2, 5)}`, lobbyId, playerName);
         }
     });
 }
@@ -510,21 +510,26 @@ async function startMultiplayer(roomPass, playerName) {
 function setupConn(c) {
     c.on('open', () => {
         connections[c.peer] = c;
-        addLog(`プレイヤーが参加しました`);
-        // 初回同期用に自分の情報を送る
+        // 自分の最新状態を送信
         syncState('join');
     });
 
     c.on('data', (data) => {
         if (data.type === 'sync') {
             handleRemoteSync(c.peer, data);
+
+            // Lobbyなら他の全員にリレー（ブロードキャスト）
+            if (isLobby) {
+                relayData(data, c.peer);
+            }
         }
     });
 
     c.on('close', () => {
-        addLog(`プレイヤーが退出しました`);
-        if (remotePlayers[c.peer]) {
-            scene.remove(remotePlayers[c.peer].group);
+        const p = remotePlayers[c.peer];
+        if (p) {
+            addLog(`${p.name} が退出しました`);
+            scene.remove(p.group);
             delete remotePlayers[c.peer];
         }
         delete connections[c.peer];
@@ -532,27 +537,33 @@ function setupConn(c) {
     });
 }
 
-function handleRemoteSync(id, data) {
-    if (!remotePlayers[id]) {
-        remotePlayers[id] = new Player(id, data.name || 'Unknown', 0xff00ea);
+function handleRemoteSync(senderPeerId, data) {
+    const actualId = data.fromId || senderPeerId;
+
+    if (!remotePlayers[actualId]) {
+        remotePlayers[actualId] = new Player(actualId, data.name || 'Unknown', 0xff00ea);
         addLog(`${data.name || '対戦相手'} が参戦しました！`);
         updateHUD();
     }
-    const p = remotePlayers[id];
+
+    const p = remotePlayers[actualId];
     p.group.position.set(data.x, data.y, data.z);
     p.group.rotation.y = data.ry;
     p.hp = data.hp;
+    p.isWalking = data.isWalking;
+
     if (data.action === 'punch') p.punch();
     if (data.action === 'kick') p.kick();
-    p.isWalking = data.isWalking;
+
     updateHUD();
 }
 
 function syncState(action = 'none') {
-    if (Object.keys(connections).length === 0) return;
+    if (!localPlayer) return;
 
     const data = {
         type: 'sync',
+        fromId: peer.id,
         name: localPlayer.name,
         x: localPlayer.group.position.x,
         y: localPlayer.group.position.y,
@@ -563,8 +574,17 @@ function syncState(action = 'none') {
         action: action
     };
 
+    // 全ての接続先に送信
     Object.values(connections).forEach(c => {
         if (c.open) c.send(data);
+    });
+}
+
+function relayData(data, excludePeerId) {
+    Object.values(connections).forEach(c => {
+        if (c.peer !== excludePeerId && c.open) {
+            c.send(data);
+        }
     });
 }
 
