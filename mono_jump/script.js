@@ -231,6 +231,7 @@ let finishTime = 0;
 let isGameRunning = false;
 let controlMode = 'keyboard';
 let timerInterval = null;
+let canJump = true; // ジャンプボタンの単発押しを管理
 
 // 初期化
 function init() {
@@ -342,16 +343,34 @@ function update() {
     checkCollision('y');
 
     // ジャンプ処理
-    if ((keys['ArrowUp'] || keys['KeyW'] || keys['Space'])) {
-        if (player.onGround) {
-            player.vy = JUMP_FORCE;
-            player.onGround = false;
-        } else if (player.onWall) {
-            // 壁キック
-            player.vy = WALL_JUMP_FORCE_Y;
-            player.vx = (player.onWall === 'left' ? WALL_JUMP_FORCE_X : -WALL_JUMP_FORCE_X);
-            player.onWall = null; // 連続壁キック阻止用
+    const jumpKey = keys['ArrowUp'] || keys['KeyW'] || keys['Space'];
+    if (jumpKey) {
+        if (canJump) {
+            if (player.onGround) {
+                player.vy = JUMP_FORCE;
+                player.onGround = false;
+                canJump = false;
+            } else if (player.onWall) {
+                // 壁ジャンプ
+                player.vy = WALL_JUMP_FORCE_Y;
+
+                // 駆け上がりの判定: 接触している壁の方向にキーを押し続けているか
+                const pressingAgainstWall = (player.onWall === 'left' && (keys['ArrowLeft'] || keys['KeyA'])) ||
+                    (player.onWall === 'right' && (keys['ArrowRight'] || keys['KeyD']));
+
+                if (pressingAgainstWall) {
+                    // 駆け上がり: ほとんど垂直に飛ぶが、わずかに壁に押し付けることで連続ジャンプを容易にする
+                    player.vx = (player.onWall === 'left' ? -2 : 2);
+                } else {
+                    // 壁キック: 反対方向に大きく飛ぶ
+                    player.vx = (player.onWall === 'left' ? WALL_JUMP_FORCE_X : -WALL_JUMP_FORCE_X);
+                    // 以前の player.onWall = null; は不要 (checkCollisionで毎フレームリセットされるため)
+                }
+                canJump = false;
+            }
         }
+    } else {
+        canJump = true;
     }
 }
 
