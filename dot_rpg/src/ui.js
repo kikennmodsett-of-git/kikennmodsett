@@ -32,10 +32,11 @@ export class UI {
         document.getElementById('action-panel').innerHTML = '';
     }
 
-    addAction(label, callback) {
+    addAction(label, callback, extraStyle = "") {
         const btn = document.createElement('button');
         btn.textContent = label;
         btn.onclick = callback;
+        if (extraStyle) btn.style.cssText += extraStyle;
         document.getElementById('action-panel').appendChild(btn);
     }
 }

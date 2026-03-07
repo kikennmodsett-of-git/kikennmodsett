@@ -58,13 +58,21 @@ export class Battle {
         allSkills.forEach(skill => {
             const ct = skill.currentCooldown || 0;
             const btnText = ct > 0 ? `${skill.name} (CT:${ct})` : skill.name;
+
+            // 属性色の取得
+            const elementColors = {
+                "炎": "#ff4b2b", "氷": "#00d4ff", "風": "#2ecc71",
+                "土": "#a67c52", "光": "#ffd700", "闇": "#9b59b6", "無": "#ecf0f1"
+            };
+            const borderColor = elementColors[skill.element] || "var(--accent-color)";
+
             this.ui.addAction(btnText, () => {
                 if (ct > 0) {
                     this.ui.log(`${skill.name} はまだ使えない！ (あと ${ct} ターン)`);
                     return;
                 }
                 this.executeSkill(skill);
-            });
+            }, `border: 2px solid ${borderColor}`);
         });
 
         this.ui.addAction("戻る", () => this.playerTurn());
@@ -198,25 +206,53 @@ export class Battle {
             }
         });
 
-        // レアドロップ判定 (入手しやすく: 30%)
-        if (Math.random() < (0.3 + this.player.stats.luck * 0.005)) {
-            this.ui.log("お宝を発見！ 新たなスキルを手に入れた！");
-            const randomSkill = window.game.skillDB[Math.floor(Math.random() * window.game.skillDB.length)];
-            this.player.learnSkill(randomSkill);
-        }
-
-        // ダンジョン内なら低確率で武器を拾う
-        if (this.monster.isDungeonMonster && Math.random() < 0.2) {
-            this.ui.log("なんと、強力な武器を拾った！");
-            this.player.equipment.weapon = { name: "ダンジョンの秘剣", atk: this.player.equipment.weapon.atk + 5 };
-        }
-
         this.player.gold += this.monster.gold;
         if (this.player.gainExp(this.monster.exp)) {
             this.ui.log("レベルアップ！ ステータスポイントを5獲得しました。");
         }
+
+        // 素材ドロップ判定
+        const luckBonus = this.player.stats.luck * 0.001;
+        const rollNormal = Math.random();
+        const rollRare = Math.random();
+
+        const dropRateNormal = 0.5 + luckBonus;
+        const dropRateRare = 0.05 + luckBonus;
+
+        const materialLevel = Math.floor(this.monster.level / 5) + 1;
+
+        // 通常ドロップ
+        if (rollNormal < dropRateNormal) {
+            const materialName = this.monster.element === "炎" ? "火炎石" :
+                this.monster.element === "氷" ? "氷結晶" :
+                    this.monster.element === "風" ? "疾風羽" :
+                        this.monster.element === "土" ? "大地岩" :
+                            this.monster.element === "光" ? "光輝砂" :
+                                this.monster.element === "闇" ? "闇影核" : "魔力屑";
+
+            this.gainMaterial(materialName, materialLevel, false);
+        }
+
+        // レアドロップ
+        if (rollRare < dropRateRare) {
+            const rareMaterialName = "幻の金属";
+            this.gainMaterial(rareMaterialName, materialLevel, true);
+        }
+
         this.ui.updateHeader(this.player);
         this.endBattle();
+    }
+
+    gainMaterial(name, level, isRare) {
+        const key = `${name}(Lv.${level})`;
+        if (!this.player.materials[key]) {
+            this.player.materials[key] = { count: 0, level: level, isRare: isRare, baseName: name };
+        }
+        this.player.materials[key].count++;
+
+        const color = isRare ? "#ffff00" : "#ffffff";
+        const msg = `<span style="color: ${color}">${name} Lv.${level} を手に入れた！</span>`;
+        this.ui.log(msg);
     }
 
     lose() {

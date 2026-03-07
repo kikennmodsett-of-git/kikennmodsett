@@ -37,6 +37,7 @@ export class Player {
         };
 
         this.inventory = [];
+        this.materials = {}; // 素材所持数 { "素材名": { count: 0, level: 1, isRare: false } }
         this.controlMode = "pc"; // "pc" or "mobile"
 
         // リスポーン地点 (初期値: 始まりの町)

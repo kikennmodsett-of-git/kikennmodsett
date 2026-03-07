@@ -134,7 +134,7 @@ export class Inventory {
         } else {
             allSkills.forEach((s, idx) => {
                 const typeLabel = s.isPassive ? "パッシブ" : "アクティブ";
-                html += `<div class="skill-item ${s.isPassive ? 'passive' : ''}" onclick="game.inventory.showSkillDetail(${idx})">
+                html += `<div class="skill-item ${s.isPassive ? 'passive' : ''} skill-element-${s.element}" onclick="game.inventory.showSkillDetail(${idx})">
                     <strong>${s.name}</strong><br>
                     <small>${s.element}属性 / ${typeLabel}</small>
                 </div>`;

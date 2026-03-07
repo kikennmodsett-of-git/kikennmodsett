@@ -147,43 +147,32 @@ class Game {
         }
     }
 
-    openArmorShop() {
-        const townLevel = Math.max(1, this.player.level);
+    openShop() {
         const discount = this.player.getDiscountRate();
 
-        const slots = ['head', 'chest', 'legs', 'feet', 'waist'];
-        const slotNames = { head: '頭装備', chest: '胸当て', legs: 'レギンス', feet: 'ブーツ', waist: '腰帯' };
-        const qualities = [
-            { name: "一般", mul: 1, color: "#fff", price: 500 },
-            { name: "上級", mul: 2, color: "#00d4ff", price: 2000 },
-            { name: "伝説", mul: 4, color: "#ffd700", price: 10000 }
+        const items = [
+            { type: 'weapon', name: "青銅の剣", atk: 10, price: 1000 },
+            { type: 'weapon', name: "鉄の剣", atk: 25, price: 3000 },
+            { type: 'armor', slot: 'head', name: "鉄の兜", stats: { defense: 5 }, price: 800 },
+            { type: 'armor', slot: 'chest', name: "鉄の胸当て", stats: { defense: 12 }, price: 2000 },
+            { type: 'armor', slot: 'legs', name: "鉄の具足", stats: { defense: 8 }, price: 1500 },
+            { type: 'armor', slot: 'feet', name: "鉄のブーツ", stats: { defense: 4, agility: 2 }, price: 1000 },
+            { type: 'armor', slot: 'waist', name: "鉄の腰帯", stats: { defense: 3, luck: 2 }, price: 800 }
         ];
 
-        let html = `<h3>防具屋</h3><p>最高品質の装備を揃えております。</p><div class="shop-grid">`;
+        let html = `<h3>総合ショップ</h3><p>厳選された装備品です。</p><div class="shop-grid">`;
 
-        slots.forEach(slot => {
-            const q = qualities[Math.floor(Math.random() * qualities.length)];
-            const baseStat = Math.floor(townLevel * 0.5 * q.mul) + 2;
-            const price = Math.floor(q.price * (townLevel / 5 + 1) * (1 - discount));
-
-            const armorItem = {
-                type: 'armor',
-                slot: slot,
-                name: `[${q.name}] ${slotNames[slot]}`,
-                stats: { defense: baseStat },
-                price: price,
-                color: q.color
-            };
-
-            if (slot === 'waist') armorItem.stats.luck = Math.floor(baseStat / 2);
-            if (slot === 'feet') armorItem.stats.agility = Math.floor(baseStat / 2);
+        items.forEach((item, idx) => {
+            const price = Math.floor(item.price * (1 - discount));
+            const statText = item.type === 'weapon' ? `攻撃+${item.atk}` :
+                Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', ');
 
             html += `
-                <div class="shop-item" style="border: 2px solid ${q.color}; padding: 10px; margin: 5px;">
-                    <strong style="color: ${q.color}">${armorItem.name}</strong><br>
-                    防御+${armorItem.stats.defense} ${armorItem.stats.luck ? ', 幸運+' + armorItem.stats.luck : ''}<br>
+                <div class="shop-item" style="border: 1px solid var(--accent-color); padding: 10px; margin: 5px;">
+                    <strong>${item.name}</strong><br>
+                    ${statText}<br>
                     価格: ${price} G<br>
-                    <button onclick='game.buyArmor(${JSON.stringify(armorItem)})'>購入</button>
+                    <button onclick='game.buyShopItem(${JSON.stringify(item)}, ${price})'>購入</button>
                 </div>
             `;
         });
@@ -192,13 +181,17 @@ class Game {
         this.ui.showModal(html);
     }
 
-    buyArmor(item) {
-        if (this.player.gold >= item.price) {
-            this.player.gold -= item.price;
-            this.player.inventory.push(item);
-            this.ui.log(`${item.name} を購入しました！ インベントリから装備してください。`);
+    buyShopItem(item, price) {
+        if (this.player.gold >= price) {
+            this.player.gold -= price;
+            if (item.type === 'weapon') {
+                this.player.inventory.push({ ...item, type: 'weapon' }); // 武器もインベントリへ
+            } else {
+                this.player.inventory.push(item);
+            }
+            this.ui.log(`${item.name} を購入しました！`);
             this.ui.updateHeader(this.player);
-            this.openArmorShop();
+            this.openShop();
         } else {
             this.ui.log("ゴールドが足りません！");
         }
@@ -218,8 +211,8 @@ class Game {
 
         this.askToUpdateRespawnPoint(town);
         this.ui.addAction("宿屋 (100G)", () => this.useInn());
-        this.ui.addAction("武器屋 (鍛冶屋)", () => this.openForge());
-        this.ui.addAction("防具屋", () => this.openArmorShop());
+        this.ui.addAction("ショップ (武器・防具)", () => this.openShop());
+        this.ui.addAction("鍛冶屋 (製作)", () => this.openForge());
         this.ui.addAction("ギルド (依頼受諾)", () => {
             this.ui.log("【ギルド】「お主の腕に見合った依頼があるぞ。」");
             this.showQuests();
@@ -252,24 +245,65 @@ class Game {
     }
 
     openForge() {
-        const cost = this.player.getAdjustedCost(1000);
-        const html = `<h3>鍛冶屋</h3>
-            <p>新しい武器を打つことができます。 (費用: ${cost} G)</p>
-            <button onclick="game.craftWeapon(${cost})">武器を作る</button>`;
+        let html = `<h3>鍛冶屋</h3><p>素材を使って強力な装備を作ります。</p>`;
+
+        const recipes = [
+            { name: "魔鋼の剣", type: "weapon", atk: 50, materials: { "魔力屑(Lv.2)": 5, "鉄の剣": 1 }, gold: 0 },
+            { name: "火焔の剣", type: "weapon", atk: 80, materials: { "火炎石(Lv.3)": 10, "魔鋼の剣": 1 }, gold: 0 },
+            { name: "氷結の鎧", type: "armor", slot: "chest", stats: { defense: 40 }, materials: { "氷結晶(Lv.3)": 8, "鉄の胸当て": 1 }, gold: 2000 },
+            { name: "神域の兜", type: "armor", slot: "head", stats: { defense: 60 }, materials: { "幻の金属(Lv.5)": 3, "光輝砂(Lv.5)": 10 }, gold: 5000 }
+        ];
+
+        html += `<div class="forge-list">`;
+        recipes.forEach(recipe => {
+            const canCraft = this.checkRecipe(recipe);
+            const matText = Object.entries(recipe.materials).map(([name, count]) => `${name}x${count}`).join('<br>');
+
+            html += `
+                <div class="shop-item" style="border: 1px solid #ffaa00; margin-bottom: 10px;">
+                    <strong>${recipe.name}</strong><br>
+                    <small>${matText}</small><br>
+                    費用: ${recipe.gold} G<br>
+                    <button onclick='game.craftItem(${JSON.stringify(recipe)})' ${canCraft ? '' : 'disabled'}>製作</button>
+                </div>
+            `;
+        });
+        html += `</div><button onclick="game.ui.hideModal()">戻る</button>`;
         this.ui.showModal(html);
     }
 
-    craftWeapon(cost) {
-        if (this.player.gold >= cost) {
-            this.player.gold -= cost;
-            const newAtk = this.player.equipment.weapon.atk + 5;
-            this.player.equipment.weapon = { name: "強化された剣", atk: newAtk };
-            this.ui.log(`新しい武器を手に入れた！ (攻撃力 +${newAtk})`);
-            this.ui.updateHeader(this.player);
-            this.ui.hideModal();
-        } else {
-            this.ui.log("ゴールドが足りない！");
+    checkRecipe(recipe) {
+        for (const [name, count] of Object.entries(recipe.materials)) {
+            // 素材チェック
+            if (this.player.materials[name]) {
+                if (this.player.materials[name].count < count) return false;
+            } else {
+                // インベントリ内の装備チェック (簡易実装: 名前一致)
+                const invItem = this.player.inventory.find(it => it.name === name);
+                if (!invItem) return false;
+            }
         }
+        if (this.player.gold < recipe.gold) return false;
+        return true;
+    }
+
+    craftItem(recipe) {
+        // 素材とゴールドの消費
+        for (const [name, count] of Object.entries(recipe.materials)) {
+            if (this.player.materials[name]) {
+                this.player.materials[name].count -= count;
+            } else {
+                const invIdx = this.player.inventory.findIndex(it => it.name === name);
+                if (invIdx !== -1) this.player.inventory.splice(invIdx, 1);
+            }
+        }
+        this.player.gold -= recipe.gold;
+
+        // アイテム獲得
+        this.player.inventory.push(recipe);
+        this.ui.log(`${recipe.name} を製作しました！`);
+        this.ui.updateHeader(this.player);
+        this.openForge();
     }
 
     openFusionCenter() {
