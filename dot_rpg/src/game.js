@@ -153,6 +153,9 @@ class Game {
         const items = [
             { type: 'weapon', name: "青銅の剣", atk: 10, price: 1000 },
             { type: 'weapon', name: "鉄の剣", atk: 25, price: 3000 },
+            { type: 'weapon', name: "炎の剣", atk: 40, price: 8000, element: "炎" },
+            { type: 'armor', slot: 'chest', name: "水の鎧", stats: { defense: 15 }, price: 6000, element: "氷" },
+            { type: 'armor', slot: 'waist', name: "光の腰帯", stats: { defense: 5, luck: 10 }, price: 12000, element: "光", isRare: true },
             { type: 'armor', slot: 'head', name: "鉄の兜", stats: { defense: 5 }, price: 800 },
             { type: 'armor', slot: 'chest', name: "鉄の胸当て", stats: { defense: 12 }, price: 2000 },
             { type: 'armor', slot: 'legs', name: "鉄の具足", stats: { defense: 8 }, price: 1500 },
@@ -248,10 +251,10 @@ class Game {
         let html = `<h3>鍛冶屋</h3><p>素材を使って強力な装備を作ります。</p>`;
 
         const recipes = [
-            { name: "魔鋼の剣", type: "weapon", atk: 50, materials: { "魔力屑(Lv.2)": 5, "鉄の剣": 1 }, gold: 0 },
-            { name: "火焔の剣", type: "weapon", atk: 80, materials: { "火炎石(Lv.3)": 10, "魔鋼の剣": 1 }, gold: 0 },
-            { name: "氷結の鎧", type: "armor", slot: "chest", stats: { defense: 40 }, materials: { "氷結晶(Lv.3)": 8, "鉄の胸当て": 1 }, gold: 2000 },
-            { name: "神域の兜", type: "armor", slot: "head", stats: { defense: 60 }, materials: { "幻の金属(Lv.5)": 3, "光輝砂(Lv.5)": 10 }, gold: 5000 }
+            { name: "魔鋼の剣", type: "weapon", atk: 50, materials: { "魔力屑(Lv.2)": 5, "鉄の剣": 1 }, gold: 0, element: "無" },
+            { name: "火焔の剣", type: "weapon", atk: 80, materials: { "火炎石(Lv.3)": 10, "魔鋼の剣": 1 }, gold: 0, element: "炎", isRare: true },
+            { name: "氷結の鎧", type: "armor", slot: "chest", stats: { defense: 40 }, materials: { "氷結晶(Lv.3)": 8, "鉄の胸当て": 1 }, gold: 2000, element: "氷" },
+            { name: "神域の兜", type: "armor", slot: "head", stats: { defense: 60 }, materials: { "幻の金属(Lv.5)": 3, "光輝砂(Lv.5)": 10 }, gold: 5000, element: "光", isRare: true }
         ];
 
         html += `<div class="forge-list">`;

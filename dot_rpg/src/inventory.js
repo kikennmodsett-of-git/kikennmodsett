@@ -24,11 +24,21 @@ export class Inventory {
     showStats() {
         const p = this.player;
         const total = p.getTotalStats();
-        const html = `
+
+        // 属性色の取得用 (CSSクラスとのマッピング)
+        const getElementClass = (element) => element ? `skill-element-${element}` : "";
+        const getRareStyle = (isRare) => isRare ? 'color: #ffff00; font-weight: bold;' : '';
+
+        let html = `
             <h3>キャラクターステータス</h3>
             <p>レベル: ${p.level} (Next: ${p.nextLevelExp - p.exp})</p>
             <p>HP: ${p.hp} / ${p.maxHp}</p>
-            <p>武器: ${p.equipment.weapon.name} (攻撃力 +${p.equipment.weapon.atk})</p>
+            <p><strong>現在の装備</strong></p>
+            <ul>
+                <li>武器: ${p.equipment.weapon.name} (攻撃力 +${p.equipment.weapon.atk})</li>
+                <li>頭身: ${p.equipment.head ? p.equipment.head.name : "なし"}</li>
+                <li>胴体: ${p.equipment.chest ? p.equipment.chest.name : "なし"}</li>
+            </ul>
             <hr>
             <p>残りポイント: ${p.statusPoints}</p>
             <ul class="stat-list">
@@ -37,9 +47,47 @@ export class Inventory {
                 <li>敏捷: ${total.agility} (基本:${p.stats.agility}) <button onclick="game.inventory.allocate('agility')">+</button></li>
                 <li>幸運: ${total.luck} (基本:${p.stats.luck}) <button onclick="game.inventory.allocate('luck')">+</button></li>
                 <li>人徳: ${total.virtue} (基本:${p.stats.virtue}) <button onclick="game.inventory.allocate('virtue')">+</button></li>
-                <li>最大体力 (+5): ${p.stats.hp} <button onclick="game.inventory.allocate('hp')">+</button></li>
+                <li>最大体力上昇: ${p.stats.hp} <button onclick="game.inventory.allocate('hp')">+</button></li>
             </ul>
-        `;
+            <hr>
+            <h4>【所持アイテム】</h4>
+            <div class="shop-grid">`;
+
+        if (p.inventory.length === 0) {
+            html += "<p>アイテムを持っていません。</p>";
+        } else {
+            p.inventory.forEach(item => {
+                const elementClass = getElementClass(item.element);
+                const rareStyle = getRareStyle(item.isRare);
+                const statText = item.type === 'weapon' ? `攻撃+${item.atk}` :
+                    Object.entries(item.stats || {}).map(([k, v]) => `${k}+${v}`).join(', ');
+
+                html += `
+                    <div class="shop-item ${elementClass}" style="padding: 5px; margin: 2px; font-size: 11px;">
+                        <span style="${rareStyle}">${item.name}</span><br>
+                        <small>${statText}</small>
+                    </div>`;
+            });
+        }
+
+        html += `</div><hr><h4>【所持素材】</h4><ul style="font-size: 11px; column-count: 2;">`;
+
+        const materialKeys = Object.keys(p.materials);
+        if (materialKeys.length === 0) {
+            html += "<li>素材を持っていません。</li>";
+        } else {
+            materialKeys.forEach(key => {
+                const mat = p.materials[key];
+                const rareStyle = getRareStyle(mat.isRare);
+                if (mat.count > 0) {
+                    html += `<li style="list-style: none; margin-bottom: 3px;">
+                        <span style="${rareStyle}">${key}</span>: ${mat.count}個
+                    </li>`;
+                }
+            });
+        }
+
+        html += `</ul>`;
         document.getElementById('inv-content').innerHTML = html;
     }
 
