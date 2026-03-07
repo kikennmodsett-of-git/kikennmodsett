@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mono-Jump | 2D Action Game</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=DotGothic16&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div id="game-container">
+        <!-- 初期・設定画面 -->
+        <div id="overlay-screen" class="screen">
+            <div class="content">
+                <h1 class="title">MONO-JUMP</h1>
+                <p class="desc">一つ目の冒険、全15ステージを駆け抜けろ</p>
+                <div class="mode-selection">
+                    <p>操作モードを選択してください</p>
+                    <button class="btn" onclick="startGame('keyboard')">キーボード (矢印キー/WASD)</button>
+                    <button class="btn" onclick="startGame('mobile')">モバイル (画面パッド)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- UI要素 -->
+        <div id="game-ui" class="hidden">
+            <div class="stats">
+                <span id="stage-display">STAGE: 1 / 15</span>
+                <span id="timer-display">TIME: 00:00.00</span>
+            </div>
+        </div>
+
+        <!-- ゲームキャンバス -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- モバイル操作パッド -->
+        <div id="mobile-controls" class="hidden">
+            <div class="d-pad">
+                <button id="btn-left" class="pad-btn">←</button>
+                <button id="btn-right" class="pad-btn">→</button>
+            </div>
+            <div class="action-pad">
+                <button id="btn-jump" class="pad-btn jump">JUMP</button>
+            </div>
+        </div>
+
+        <!-- クリア画面 -->
+        <div id="clear-screen" class="screen hidden">
+            <div class="content">
+                <h2 class="title">GAME CLEAR!</h2>
+                <p>あなたは全ての試練を乗り越えました</p>
+                <div class="final-time">
+                    TIME: <span id="final-time-display">00:00.00</span>
+                </div>
+                <button class="btn" onclick="location.reload()">もう一度プレイ</button>
+                <a href="../index.html" class="btn secondary">ポートフォリオに戻る</a>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

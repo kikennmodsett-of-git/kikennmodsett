@@ -1,0 +1,205 @@
+:root {
+    --bg-color: #0d0d12;
+    --accent-color: #00d4ff;
+    --text-color: #ffffff;
+    --panel-bg: rgba(255, 255, 255, 0.05);
+    --border-color: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 800px;
+    max-height: 600px;
+    background: #000;
+    overflow: hidden;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 212, 255, 0.2);
+    border: 1px solid var(--border-color);
+}
+
+#game-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(13, 13, 18, 0.9);
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    transition: opacity 0.5s ease;
+}
+
+.content {
+    text-align: center;
+    padding: 40px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.title {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+    background: linear-gradient(45deg, #00d4ff, #004e92);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.desc {
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 32px;
+}
+
+.mode-selection p {
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.btn {
+    display: block;
+    width: 100%;
+    padding: 16px 24px;
+    margin-bottom: 12px;
+    background-color: var(--accent-color);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn.secondary {
+    background-color: transparent;
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+}
+
+#game-ui {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    width: 100%;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 50;
+    font-family: 'DotGothic16', sans-serif;
+}
+
+.stats {
+    display: flex;
+    gap: 24px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(4px);
+}
+
+#timer-display {
+    color: var(--accent-color);
+}
+
+/* モバイル操作パッド */
+#mobile-controls {
+    position: absolute;
+    bottom: 30px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 30px;
+    pointer-events: none;
+    z-index: 60;
+}
+
+.d-pad,
+.action-pad {
+    display: flex;
+    gap: 15px;
+    pointer-events: auto;
+}
+
+.pad-btn {
+    width: 70px;
+    height: 70px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: white;
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    user-select: none;
+}
+
+.pad-btn:active {
+    background: var(--accent-color);
+    color: #000;
+}
+
+.pad-btn.jump {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(0, 212, 255, 0.2);
+    border-color: var(--accent-color);
+    font-weight: 700;
+}
+
+.final-time {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 24px 0;
+    color: var(--accent-color);
+    font-family: 'DotGothic16', sans-serif;
+}
