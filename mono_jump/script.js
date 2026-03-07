@@ -416,20 +416,40 @@ function checkCollision(axis) {
 
                     if (tile === '#') {
                         if (axis === 'x') {
-                            if (player.vx > 0) {
-                                player.x = col * TILE_SIZE - player.width;
-                                if (!player.onGround) player.onWall = 'right';
-                            } else if (player.vx < 0) {
-                                player.x = (col + 1) * TILE_SIZE;
-                                if (!player.onGround) player.onWall = 'left';
-                            } else {
-                                // 速度が0でも接触していれば壁判定を行う（壁ずり等用）
-                                if (!player.onGround) {
-                                    if (player.x < col * TILE_SIZE) player.onWall = 'right';
-                                    if (player.x > col * TILE_SIZE) player.onWall = 'left';
+                            // 坂道・ステップ登りの処理 (動画の4:27付近の仕組み)
+                            // 衝突した際、少しずつ上にずらして衝突が解消されるか試す
+                            let climbed = false;
+                            const maxClimb = 8; // 最大8ピクセルまでの段差なら自動で登る
+                            const originalY = player.y;
+
+                            for (let i = 1; i <= maxClimb; i++) {
+                                player.y -= 1;
+                                if (!isIntersecting(player, tileRect)) {
+                                    climbed = true;
+                                    break;
                                 }
                             }
-                            player.vx = 0;
+
+                            if (climbed) {
+                                // 登れた場合は座標を確定（vxはそのまま）
+                            } else {
+                                // 登れなかった場合は壁として処理
+                                player.y = originalY; // Y座標を戻す
+                                if (player.vx > 0) {
+                                    player.x = col * TILE_SIZE - player.width;
+                                    if (!player.onGround) player.onWall = 'right';
+                                } else if (player.vx < -0) {
+                                    player.x = (col + 1) * TILE_SIZE;
+                                    if (!player.onGround) player.onWall = 'left';
+                                } else {
+                                    // 停止中でも接触していれば壁判定
+                                    if (!player.onGround) {
+                                        if (player.x < col * TILE_SIZE) player.onWall = 'right';
+                                        if (player.x > col * TILE_SIZE) player.onWall = 'left';
+                                    }
+                                }
+                                player.vx = 0;
+                            }
                         } else {
                             if (player.vy > 0) {
                                 player.y = row * TILE_SIZE - player.height;
