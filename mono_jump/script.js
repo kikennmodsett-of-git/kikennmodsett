@@ -417,32 +417,31 @@ function checkCollision(axis) {
                     if (tile === '#') {
                         if (axis === 'x') {
                             // 坂道・ステップ登りの処理 (動画の4:27付近の仕組み)
-                            // 衝突した際、少しずつ上にずらして衝突が解消されるか試す
                             let climbed = false;
-                            const maxClimb = 8; // 最大8ピクセルまでの段差なら自動で登る
+                            const maxClimb = 10; // 最大10ピクセルまでの段差なら自動で登る
                             const originalY = player.y;
 
                             for (let i = 1; i <= maxClimb; i++) {
                                 player.y -= 1;
-                                if (!isIntersecting(player, tileRect)) {
+                                // どの障害物とも衝突しなくなったかチェック
+                                if (!checkAnyCollision()) {
                                     climbed = true;
                                     break;
                                 }
                             }
 
                             if (climbed) {
-                                // 登れた場合は座標を確定（vxはそのまま）
+                                // 登れた場合は座標を確定
                             } else {
                                 // 登れなかった場合は壁として処理
                                 player.y = originalY; // Y座標を戻す
                                 if (player.vx > 0) {
                                     player.x = col * TILE_SIZE - player.width;
                                     if (!player.onGround) player.onWall = 'right';
-                                } else if (player.vx < -0) {
+                                } else if (player.vx < 0) {
                                     player.x = (col + 1) * TILE_SIZE;
                                     if (!player.onGround) player.onWall = 'left';
                                 } else {
-                                    // 停止中でも接触していれば壁判定
                                     if (!player.onGround) {
                                         if (player.x < col * TILE_SIZE) player.onWall = 'right';
                                         if (player.x > col * TILE_SIZE) player.onWall = 'left';
@@ -469,6 +468,27 @@ function checkCollision(axis) {
     if (axis === 'y' && player.vy !== 0) {
         player.onGround = false;
     }
+}
+
+// プレイヤーが現在いずれかの壁に衝突しているかチェック (坂道処理用)
+function checkAnyCollision() {
+    const stage = STAGES[currentStage];
+    const left = Math.floor(player.x / TILE_SIZE);
+    const right = Math.floor((player.x + player.width) / TILE_SIZE);
+    const top = Math.floor(player.y / TILE_SIZE);
+    const bottom = Math.floor((player.y + player.height) / TILE_SIZE);
+
+    for (let row = top; row <= bottom; row++) {
+        for (let col = left; col <= right; col++) {
+            if (!stage[row] || !stage[row][col]) continue;
+            if (stage[row][col] === '#') {
+                if (isIntersecting(player, { x: col * TILE_SIZE, y: row * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE })) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 function isIntersecting(r1, r2) {
