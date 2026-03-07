@@ -209,7 +209,8 @@ const GRAVITY = 0.6;
 const FRICTION = 0.85;
 const JUMP_FORCE = -12;
 const WALL_JUMP_FORCE_Y = -11;
-const WALL_JUMP_FORCE_X = 6;
+const WALL_JUMP_FORCE_X = 7; // 壁キックの反発を少し強化
+const WALL_SLIDE_SPEED = 2; // 壁ずり速度
 const ACCEL = 1.0;
 const MAX_SPEED = 6;
 
@@ -342,6 +343,11 @@ function update() {
     player.y += player.vy;
     checkCollision('y');
 
+    // 壁ずり（ウォールスライド）処理
+    if (player.onWall && player.vy > WALL_SLIDE_SPEED) {
+        player.vy = WALL_SLIDE_SPEED;
+    }
+
     // ジャンプ処理
     const jumpKey = keys['ArrowUp'] || keys['KeyW'] || keys['Space'];
     if (jumpKey) {
@@ -388,8 +394,13 @@ function checkCollision(axis) {
             if (!stage[row] || !stage[row][col]) continue;
             const tile = stage[row][col];
 
+            // 壁判定の補助: 速度0でも壁に向かって入力していれば張り付きを維持
+            const isPushingLeft = (keys['ArrowLeft'] || keys['KeyA']);
+            const isPushingRight = (keys['ArrowRight'] || keys['KeyD']);
+
             if (tile === '#' || tile === '^' || tile === '@') {
-                if (isIntersecting(player, { x: col * TILE_SIZE, y: row * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE })) {
+                const tileRect = { x: col * TILE_SIZE, y: row * TILE_SIZE, width: TILE_SIZE, height: TILE_SIZE };
+                if (isIntersecting(player, tileRect)) {
                     if (tile === '^') {
                         restartStage();
                         return;
@@ -401,10 +412,10 @@ function checkCollision(axis) {
 
                     if (tile === '#') {
                         if (axis === 'x') {
-                            if (player.vx > 0) {
+                            if (player.vx > 0 || (isPushingRight && !player.onGround)) {
                                 player.x = col * TILE_SIZE - player.width;
                                 if (!player.onGround) player.onWall = 'right';
-                            } else if (player.vx < 0) {
+                            } else if (player.vx < 0 || (isPushingLeft && !player.onGround)) {
                                 player.x = (col + 1) * TILE_SIZE;
                                 if (!player.onGround) player.onWall = 'left';
                             }
