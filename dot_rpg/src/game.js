@@ -60,6 +60,7 @@ class Game {
     startRandomBattle(targetLv = null) {
         this.isBattleActive = true;
         this.world.hide();
+        this.saveGame('auto'); // 戦闘開始時点の状態を保存（不整合防止）
 
         let minLv, maxLv;
 
@@ -481,6 +482,7 @@ class Game {
 
     // ロード処理
     loadGame() {
+        if (this.isBattleActive) return; // 戦闘中はロードを制限して座標リセットを防ぐ
         const manualJson = localStorage.getItem('pixel_adventure_save_manual');
         const autoJson = localStorage.getItem('pixel_adventure_save_auto');
 

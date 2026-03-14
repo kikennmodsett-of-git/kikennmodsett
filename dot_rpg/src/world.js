@@ -308,6 +308,7 @@ export class World {
         this.isRenderLoopRunning = true;
 
         const loop = () => {
+            if (!this.isRenderLoopRunning) return; // フラグが折れたらループ終了
             if (!this.container.classList.contains('hidden')) {
                 this.draw();
                 this.drawMinimapOverlay();
@@ -446,10 +447,12 @@ export class World {
             this.showMobilePad();
         }
         this.updateView();
+        this.render(); // ループを再開
     }
 
     hide() {
         this.container.classList.add('hidden');
         this.hideMobilePad();
+        this.isRenderLoopRunning = false; // ループを物理的に停止
     }
 }
