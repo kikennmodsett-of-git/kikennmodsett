@@ -29,15 +29,29 @@ export class Inventory {
         const getElementClass = (element) => element ? `skill-element-${element}` : "";
         const getRareStyle = (isRare) => isRare ? 'color: #ffff00; font-weight: bold;' : '';
 
+        const slotMap = [
+            { id: 'weapon', name: '武器', type: 'weapon' },
+            { id: 'head', name: '頭部', type: 'armor' },
+            { id: 'chest', name: '胴体', type: 'armor' },
+            { id: 'legs', name: '脚部', type: 'armor' },
+            { id: 'feet', name: '足部', type: 'armor' },
+            { id: 'waist', name: '腰帯', type: 'armor' }
+        ];
+
         let html = `
             <h3>キャラクターステータス</h3>
             <p>レベル: ${p.level} (Next: ${p.nextLevelExp - p.exp})</p>
             <p>HP: ${p.hp} / ${p.maxHp}</p>
             <p><strong>現在の装備</strong></p>
-            <ul>
-                <li>武器: ${p.equipment.weapon.name} (攻撃力 +${p.equipment.weapon.atk})</li>
-                <li>頭身: ${p.equipment.head ? p.equipment.head.name : "なし"}</li>
-                <li>胴体: ${p.equipment.chest ? p.equipment.chest.name : "なし"}</li>
+            <ul style="font-size: 11px;">`;
+
+        slotMap.forEach(slot => {
+            const item = p.equipment[slot.id];
+            const statText = item ? (slot.id === 'weapon' ? `(攻撃+${item.atk})` : `(防御+${item.stats ? item.stats.defense : 0})`) : "";
+            html += `<li>${slot.name}: ${item ? item.name : "なし"} ${statText}</li>`;
+        });
+
+        html += `
             </ul>
             <hr>
             <p>残りポイント: ${p.statusPoints}</p>
@@ -101,6 +115,7 @@ export class Inventory {
     showEquipScreen() {
         const p = this.player;
         const slots = [
+            { id: 'weapon', name: '武器' },
             { id: 'head', name: '頭装備' },
             { id: 'chest', name: '胸当て' },
             { id: 'legs', name: 'レギンス' },
@@ -125,17 +140,18 @@ export class Inventory {
     showEquipCategory(slotId) {
         const p = this.player;
         // インベントリからそのスロットに合うアイテムを抽出
-        const items = p.inventory.filter(item => item.type === 'armor' && item.slot === slotId);
+        const isWeapon = slotId === 'weapon';
+        const items = p.inventory.filter(item => isWeapon ? item.type === 'weapon' : (item.type === 'armor' && item.slot === slotId));
 
         let html = `<h3>${slotId.toUpperCase()} の装備品</h3><ul>`;
         if (items.length === 0) {
             html += "<p>変更できる装備を持っていません。</p>";
         } else {
             items.forEach((item, idx) => {
-                const statsStr = Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', ');
+                const statText = isWeapon ? `攻撃+${item.atk}` : Object.entries(item.stats || {}).map(([k, v]) => `${k}+${v}`).join(', ');
                 html += `<li>
                     <button onclick="game.inventory.changeEquip('${slotId}', ${idx})">装備する</button> 
-                    ${item.name} (${statsStr})
+                    ${item.name} (${statText})
                 </li>`;
             });
         }
@@ -148,6 +164,10 @@ export class Inventory {
     changeEquip(slotId, itemIdx) {
         const p = this.player;
         const current = p.equipment[slotId];
+        const isWeapon = slotId === 'weapon';
+
+        // インベントリから該当するアイテム候補を取得
+        const items = p.inventory.filter(item => isWeapon ? item.type === 'weapon' : (item.type === 'armor' && item.slot === slotId));
 
         // 今の装備をインベントリに戻す (nullでなければ)
         if (current) {
@@ -159,7 +179,6 @@ export class Inventory {
             this.ui.log(`${slotId} の装備を外しました。`);
         } else {
             // インベントリから選んだアイテムを装備
-            const items = p.inventory.filter(item => item.type === 'armor' && item.slot === slotId);
             const newItem = items[itemIdx];
             p.equipment[slotId] = newItem;
             // インベントリから削除
