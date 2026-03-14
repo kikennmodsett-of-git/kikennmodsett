@@ -26,6 +26,7 @@ class Player {
     constructor(id, name, color, isLocal = false) {
         this.id = id;
         this.name = name;
+        this.color = color;
         this.hp = HP_MAX;
         this.isLocal = isLocal;
         this.group = new THREE.Group();
@@ -490,7 +491,7 @@ function setupPeer(mode, id, lobbyId, playerName) {
     peer.on('connection', (c) => {
         setupConn(c);
         if (isLobby) {
-            addLog(`新しいプレイヤーが接続しました`);
+            // ここでのaddLogは個別の接続時ではなく、実際の参加時（handleRemoteSync）で行うようにするため削除または調整
         }
     });
 
@@ -520,6 +521,10 @@ function setupConn(c) {
             // Lobbyなら他の全員にリレー（ブロードキャスト）
             if (isLobby) {
                 relayData(data, c.peer);
+                // 参加メッセージ（または最初の同期）なら即座に自分も同期を返して、参加相手に自分の姿を見せる
+                if (data.action === 'join') {
+                    syncState('welcome');
+                }
             }
         }
     });
@@ -540,8 +545,8 @@ function handleRemoteSync(senderPeerId, data) {
     const actualId = data.fromId || senderPeerId;
 
     if (!remotePlayers[actualId]) {
-        remotePlayers[actualId] = new Player(actualId, data.name || 'Unknown', 0xff00ea);
-        addLog(`${data.name || '対戦相手'} が参戦しました！`);
+        remotePlayers[actualId] = new Player(actualId, data.name || 'Unknown', data.color || 0xff00ea);
+        addLog(`${data.name || '対戦相手'} さんが参加しました！`);
         updateHUD();
     }
 
@@ -564,6 +569,7 @@ function syncState(action = 'none') {
         type: 'sync',
         fromId: peer.id,
         name: localPlayer.name,
+        color: localPlayer.color,
         x: localPlayer.group.position.x,
         y: localPlayer.group.position.y,
         z: localPlayer.group.position.z,
