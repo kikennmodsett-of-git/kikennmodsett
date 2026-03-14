@@ -270,12 +270,12 @@ export class Battle {
         this.ui.log(`${this.player.name} は力尽きた...`);
         this.isFinished = true;
         this.ui.clearActionPanel();
-        this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。町へ戻ります...</span>");
-        this.ui.log("<small style='color:#888;'>※直前のオートセーブ地点（町や戦闘開始時）から冒険を再開します。</small>");
+        this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。冒険を再開するにはデータをロードしてください。</span>");
 
-        setTimeout(() => {
-            window.game.respawnPlayer();
-        }, 2000);
+        // 自動リスポーンを廃止し、手動ロードへの導線を表示
+        this.ui.addAction("データをロードして再開", () => {
+            window.game.inventory.showSettings(); // ロード画面（Settings内）を直接開く
+        }, "background: #ff4b2b; font-weight: bold;");
     }
 
     endBattle(customMsg) {

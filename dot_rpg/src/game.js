@@ -548,7 +548,12 @@ class Game {
 
             this.isLastBossDefeated = data.isLastBossDefeated || false;
 
-            this.ui.log("【システム】セーブデータをロードしました！冒険の再開です。");
+            // 戦闘中の敗北からロードした場合のケア
+            this.isBattleActive = false;
+            this.ui.clearActionPanel();
+            this.showMainMap();
+
+            this.ui.log("【システム】セーブデータをロードしました！");
             this.ui.updateHeader(this.player);
         } catch (e) {
             console.error("Load failed:", e);
