@@ -234,16 +234,58 @@ export class Inventory {
     }
 
     showSettings() {
-        const html = `
-            <h3>設定</h3>
+        const getMeta = (key) => {
+            const json = localStorage.getItem(key);
+            if (!json) return null;
+            const data = JSON.parse(json);
+            const date = new Date(data.updatedAt).toLocaleString();
+            return { date, lv: data.player.level, pos: data.player.respawnPoint.name };
+        };
+
+        const manual = getMeta('pixel_adventure_save_manual') || getMeta('pixel_adventure_save');
+        const auto = getMeta('pixel_adventure_save_auto');
+
+        let html = `
+            <h3>設定・システム</h3>
             <p>操作モード: <strong>${this.player.controlMode.toUpperCase()}</strong></p>
-            <button onclick="game.inventory.toggleControl()">モードを切り替える</button>
-            <p style="margin-top:15px; font-size:11px;">
-                PC: WASD / 矢印キーで移動<br>
-                MOBILE: 画面上の十字キーで移動
+            <button onclick="game.inventory.toggleControl()">モード切り替え</button>
+            <hr>
+            <h4>【データのロード】</h4>
+            <div style="font-size: 11px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
+        `;
+
+        if (manual) {
+            html += `
+                <p>手動セーブ: ${manual.date}<br><small>Lv.${manual.lv} / ${manual.pos}</small><br>
+                <button onclick="game.inventory.confirmLoad('manual')">このデータをロードする</button></p>
+            `;
+        } else {
+            html += "<p>手動セーブデータなし</p>";
+        }
+
+        if (auto) {
+            html += `
+                <p style="margin-top:10px;">オートセーブ: ${auto.date}<br><small>Lv.${auto.lv} / ${auto.pos}</small><br>
+                <button onclick="game.inventory.confirmLoad('auto')">このデータをロードする</button></p>
+            `;
+        } else {
+            html += "<p>オートセーブデータなし</p>";
+        }
+
+        html += `
+            </div>
+            <p style="margin-top:15px; font-size:10px; color:#aaa;">
+                ※ロードすると現在の進行状況は破壊されます。
             </p>
         `;
         document.getElementById('inv-content').innerHTML = html;
+    }
+
+    confirmLoad(type) {
+        if (confirm("データをロードしますか？（現在の進行状況は失われます）")) {
+            window.game.loadGame(type);
+            this.ui.hideModal();
+        }
     }
 
     toggleControl() {

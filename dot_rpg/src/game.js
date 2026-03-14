@@ -37,8 +37,7 @@ class Game {
         document.getElementById('btn-quests').onclick = () => this.showQuests();
         document.getElementById('btn-save').onclick = () => this.saveGame('manual');
 
-        // 起動時にロードを試行
-        this.loadGame();
+        // 起動時のオートロードを廃止（手動ロードに変更）
 
         // 初期スキル習得 (ロードしていない場合のみ)
         if (!this.isLoaded) {
@@ -487,23 +486,30 @@ class Game {
         }, 0);
     }
 
-    // ロード処理
-    loadGame() {
+    // ロード処理 (type: 'manual', 'auto', または指定なしで最新を検索)
+    loadGame(type = null) {
         if (this.isBattleActive || this.isLoading) return; // 戦闘中やロード中は重複実行を制限
         this.isLoading = true;
-        const manualJson = localStorage.getItem('pixel_adventure_save_manual');
-        const autoJson = localStorage.getItem('pixel_adventure_save_auto');
-
-        // 以前のキーも考慮（マイグレーション）
-        const oldJson = localStorage.getItem('pixel_adventure_save');
-        let manualData = manualJson ? JSON.parse(manualJson) : (oldJson ? JSON.parse(oldJson) : null);
-        let autoData = autoJson ? JSON.parse(autoJson) : null;
 
         let data = null;
-        if (manualData && autoData) {
-            data = manualData.updatedAt > autoData.updatedAt ? manualData : autoData;
+        if (type === 'manual') {
+            const json = localStorage.getItem('pixel_adventure_save_manual') || localStorage.getItem('pixel_adventure_save');
+            data = json ? JSON.parse(json) : null;
+        } else if (type === 'auto') {
+            const json = localStorage.getItem('pixel_adventure_save_auto');
+            data = json ? JSON.parse(json) : null;
         } else {
-            data = manualData || autoData;
+            // 指定がない場合は従来通り最新を検索
+            const manualJson = localStorage.getItem('pixel_adventure_save_manual') || localStorage.getItem('pixel_adventure_save');
+            const autoJson = localStorage.getItem('pixel_adventure_save_auto');
+            let manualData = manualJson ? JSON.parse(manualJson) : null;
+            let autoData = autoJson ? JSON.parse(autoJson) : null;
+
+            if (manualData && autoData) {
+                data = manualData.updatedAt > autoData.updatedAt ? manualData : autoData;
+            } else {
+                data = manualData || autoData;
+            }
         }
 
         if (!data) return;
