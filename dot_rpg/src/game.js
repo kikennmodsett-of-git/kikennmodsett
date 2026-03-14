@@ -27,13 +27,13 @@ class Game {
         this.ui.log("Pixel Adventure Ver 2.0 へようこそ！");
         this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
 
-        // 初期スキル習得
+        // 初期スキル習得 (コモン)
         this.player.learnSkill(this.skillDB[0]);
-        this.player.learnSkill(this.skillDB[10]);
+        this.player.learnSkill(this.skillDB[3]);
 
         document.getElementById('btn-status').onclick = () => this.inventory.showMainMenu();
         document.getElementById('btn-quests').onclick = () => this.showQuests();
-        document.getElementById('btn-shop').onclick = () => this.ui.log("町の中で施設を利用してください。");
+        document.getElementById('btn-quests').onclick = () => this.showQuests();
 
         this.showMainMap();
         this.ui.updateHeader(this.player);
@@ -248,65 +248,115 @@ class Game {
     }
 
     openForge() {
-        let html = `<h3>鍛冶屋</h3><p>素材を使って強力な装備を作ります。</p>`;
-
-        const recipes = [
-            { name: "魔鋼の剣", type: "weapon", atk: 50, materials: { "魔力屑(Lv.2)": 5, "鉄の剣": 1 }, gold: 0, element: "無" },
-            { name: "火焔の剣", type: "weapon", atk: 80, materials: { "火炎石(Lv.3)": 10, "魔鋼の剣": 1 }, gold: 0, element: "炎", isRare: true },
-            { name: "氷結の鎧", type: "armor", slot: "chest", stats: { defense: 40 }, materials: { "氷結晶(Lv.3)": 8, "鉄の胸当て": 1 }, gold: 2000, element: "氷" },
-            { name: "神域の兜", type: "armor", slot: "head", stats: { defense: 60 }, materials: { "幻の金属(Lv.5)": 3, "光輝砂(Lv.5)": 10 }, gold: 5000, element: "光", isRare: true }
-        ];
-
-        html += `<div class="forge-list">`;
-        recipes.forEach(recipe => {
-            const canCraft = this.checkRecipe(recipe);
-            const matText = Object.entries(recipe.materials).map(([name, count]) => `${name}x${count}`).join('<br>');
-
-            html += `
-                <div class="shop-item" style="border: 1px solid #ffaa00; margin-bottom: 10px;">
-                    <strong>${recipe.name}</strong><br>
-                    <small>${matText}</small><br>
-                    費用: ${recipe.gold} G<br>
-                    <button onclick='game.craftItem(${JSON.stringify(recipe)})' ${canCraft ? '' : 'disabled'}>製作</button>
-                </div>
-            `;
-        });
-        html += `</div><button onclick="game.ui.hideModal()">戻る</button>`;
+        let html = `<h3>鍛冶屋</h3><p>手持ちの素材を組み合わせて装備を作ります。</p>`;
+        html += `<div id="forge-selection">
+            <button onclick="window.game.selectForgeCategory('weapon')">武器を作る</button>
+            <button onclick="window.game.selectForgeCategory('armor')">防具を作る</button>
+        </div>
+        <div id="forge-dynamic-area" style="margin-top: 15px;"></div>
+        <button onclick="game.ui.hideModal()" style="margin-top:10px;">店を出る</button>`;
         this.ui.showModal(html);
+        this.forgeData = { category: '', materials: {} };
     }
 
-    checkRecipe(recipe) {
-        for (const [name, count] of Object.entries(recipe.materials)) {
-            // 素材チェック
-            if (this.player.materials[name]) {
-                if (this.player.materials[name].count < count) return false;
-            } else {
-                // インベントリ内の装備チェック (簡易実装: 名前一致)
-                const invItem = this.player.inventory.find(it => it.name === name);
-                if (!invItem) return false;
-            }
-        }
-        if (this.player.gold < recipe.gold) return false;
-        return true;
+    selectForgeCategory(cat) {
+        this.forgeData.category = cat;
+        this.updateForgeUI();
     }
 
-    craftItem(recipe) {
-        // 素材とゴールドの消費
-        for (const [name, count] of Object.entries(recipe.materials)) {
-            if (this.player.materials[name]) {
-                this.player.materials[name].count -= count;
-            } else {
-                const invIdx = this.player.inventory.findIndex(it => it.name === name);
-                if (invIdx !== -1) this.player.inventory.splice(invIdx, 1);
-            }
-        }
-        this.player.gold -= recipe.gold;
+    updateForgeUI() {
+        const area = document.getElementById('forge-dynamic-area');
+        if (!area) return;
 
-        // アイテム獲得
-        this.player.inventory.push(recipe);
-        this.ui.log(`${recipe.name} を製作しました！`);
+        let html = `<h4>${this.forgeData.category === 'weapon' ? '武器' : '防具'}の素材選択</h4>`;
+        const mats = Object.entries(this.player.materials).filter(([_, m]) => m.count > 0);
+
+        if (mats.length === 0) {
+            html += "<p>素材を持っていません。</p>";
+        } else {
+            html += `<div style="max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 5px;">`;
+            mats.forEach(([key, m]) => {
+                const selectedCount = this.forgeData.materials[key] || 0;
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px solid #333;">
+                        <span>${key} (所持:${m.count})</span>
+                        <div>
+                            <button onclick="window.game.changeForgeMat('${key}', -1)">-</button>
+                            <span style="width: 20px; display: inline-block; text-align: center;">${selectedCount}</span>
+                            <button onclick="window.game.changeForgeMat('${key}', 1)">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+        }
+
+        const totalSelected = Object.values(this.forgeData.materials).reduce((a, b) => a + b, 0);
+        if (totalSelected > 0) {
+            html += `<button onclick="window.game.executeForge()" style="margin-top:10px; width:100%; background: #ffaa00; font-weight: bold;">製作を開始する</button>`;
+        }
+        area.innerHTML = html;
+    }
+
+    changeForgeMat(key, diff) {
+        const count = this.forgeData.materials[key] || 0;
+        const newCount = Math.max(0, Math.min(this.player.materials[key].count, count + diff));
+        if (newCount === 0) delete this.forgeData.materials[key];
+        else this.forgeData.materials[key] = newCount;
+        this.updateForgeUI();
+    }
+
+    executeForge() {
+        const mats = this.forgeData.materials;
+        let totalPower = 0;
+        let elements = new Set();
+        let nameParts = [];
+
+        for (const [key, count] of Object.entries(mats)) {
+            const m = this.player.materials[key];
+            totalPower += m.level * count;
+            if (m.baseName !== "魔力屑" && m.baseName !== "幻の金属") {
+                elements.add(this.getElementFromName(m.baseName));
+            }
+            if (count >= 5) nameParts.push(m.baseName.replace("石", "").replace("晶", ""));
+            this.player.materials[key].count -= count;
+        }
+
+        const isWeapon = this.forgeData.category === 'weapon';
+        let element = elements.size > 0 ? Array.from(elements)[0] : "無";
+
+        // デュアル属性判定 (2種類以上の属性素材があり、かつ低確率)
+        if (elements.size >= 2 && Math.random() < 0.3) {
+            const elArray = Array.from(elements);
+            element = `${elArray[0]}・${elArray[1]}`;
+            totalPower *= 1.2; // ボーナス
+        }
+
+        const baseName = nameParts.length > 0 ? nameParts[0] : (isWeapon ? "なまくら" : "お古");
+        const finalName = `${baseName}の${isWeapon ? '鍛造剣' : '特製鎧'}`;
+
+        const newItem = isWeapon ? {
+            type: 'weapon',
+            name: finalName,
+            atk: Math.floor(totalPower * 2.5),
+            element: element
+        } : {
+            type: 'armor',
+            slot: 'chest',
+            name: finalName,
+            stats: { defense: Math.floor(totalPower * 1.5) },
+            element: element
+        };
+
+        this.player.inventory.push(newItem);
+        this.ui.log(`${finalName} (${element}属性) を作り上げた！`);
         this.ui.updateHeader(this.player);
-        this.openForge();
+        this.ui.hideModal();
+    }
+
+    getElementFromName(name) {
+        const map = { "火炎石": "炎", "氷結晶": "氷", "疾風羽": "風", "大地岩": "土", "光輝砂": "光", "闇影核": "闇" };
+        return map[name] || "無";
     }
 
     openFusionCenter() {

@@ -10,25 +10,34 @@ export const SkillDB = {
             { name: "冥府の呪縛", element: "闇", category: "魔法" },
             { name: "疾風の乱舞", element: "風", category: "魔法" }
         ];
-        const rarities = ["[一般]", "[上級]", "[秘伝]", "[奥義]", "[神話]"];
+        const rarities = [
+            { name: "コモン", color: "#ffffff" },
+            { name: "アンコモン", color: "#87ff70" },
+            { name: "レア", color: "#00d4ff" },
+            { name: "エピック", color: "#a335ee" },
+            { name: "レジェンダリー", color: "#ff8000" },
+            { name: "ミシック", color: "#e60000" }
+        ];
 
         const adjs = ["虚空を裂く", "天を焦がす", "魂を凍らせる", "次元を越える", "理を覆す", "聖なる光の", "深淵に眠る", "神威を纏う"];
         const suffixes = ["・極", "・零", "・真", "・天", "・影", ""];
 
         for (let i = 1; i <= 600; i++) {
             const typeInfo = types[i % types.length];
-            const rarity = rarities[Math.floor(i / 120) % rarities.length];
+            const rarityInfo = rarities[Math.min(rarities.length - 1, Math.floor(i / 100))];
             const adj = adjs[Math.floor(i / 8) % adjs.length];
             const suffix = suffixes[i % suffixes.length];
             const isPassive = i % 6 === 0;
 
             let name = isPassive
-                ? `${rarity} ${adj}${typeInfo.element}の加護`
-                : `${rarity} ${adj}${typeInfo.name}${suffix}`;
+                ? `[${rarityInfo.name}] ${adj}${typeInfo.element}の加護`
+                : `[${rarityInfo.name}] ${adj}${typeInfo.name}${suffix}`;
 
             skills.push({
                 id: `skill_${i}`,
                 name: `${name} +${(i % 20) + 1}`,
+                rarityName: rarityInfo.name,
+                rarityColor: rarityInfo.color,
                 description: isPassive
                     ? `【${typeInfo.category}】${typeInfo.element}属性の力を常に宿す。`
                     : `【${typeInfo.category}】${typeInfo.element}属性の力を解き放つ ${typeInfo.healing ? '癒やし' : '攻撃'}。`,

@@ -66,7 +66,7 @@ export class Battle {
             };
             const borderColor = elementColors[skill.element] || "var(--accent-color)";
 
-            this.ui.addAction(btnText, () => {
+            this.ui.addAction(`<span style="color: ${skill.rarityColor || '#fff'}">${btnText}</span>`, () => {
                 if (ct > 0) {
                     this.ui.log(`${skill.name} はまだ使えない！ (あと ${ct} ターン)`);
                     return;
@@ -233,10 +233,16 @@ export class Battle {
             this.gainMaterial(materialName, materialLevel, false);
         }
 
-        // レアドロップ
+        // レアドロップ判定 (80通りの名前候補を動的に生成)
         if (rollRare < dropRateRare) {
-            const rareMaterialName = "幻の金属";
-            this.gainMaterial(rareMaterialName, materialLevel, true);
+            const rarePrefixes = ["神聖な", "呪われた", "いにしえの", "黄金の", "暗黒の", "輝く", "震える", "静かな", "荒ぶる", "高貴な"]; // 10
+            const rareBases = ["大剣", "盾", "首飾り", "指輪", "魔導書", "宝珠", "結晶", "聖遺物"]; // 8 -> 計80通り
+
+            const pIdx = Math.floor(Math.random() * rarePrefixes.length);
+            const bIdx = Math.floor(Math.random() * rareBases.length);
+            const rareItemName = `${rarePrefixes[pIdx]}${this.monster.element}の${rareBases[bIdx]}`;
+
+            this.gainMaterial(rareItemName, materialLevel, true);
         }
 
         this.ui.updateHeader(this.player);
