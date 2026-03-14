@@ -498,8 +498,11 @@ function setupPeer(mode, id, lobbyId, playerName) {
     peer.on('error', (err) => {
         console.error('Peer error:', err);
         if (err.type === 'peer-unavailable' && mode === 'join') {
-            alert('ルームが見つかりません。パスワードが正しいか、ホストが作成済みか確認してください。');
-            location.reload();
+            addLog('エラー: 指定されたパスワードのルームが存在しません。');
+            gameActive = false;
+            // メニューに戻る
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('join-menu').classList.remove('hidden');
         } else if (err.type === 'unavailable-id' && mode === 'create') {
             alert('このパスワードのルームは既に使用されています。別のパスワードを試してください。');
             location.reload();
