@@ -52,9 +52,11 @@ export class World {
         this.playerY = 10;
         this.isMoving = false;
         this.keys = {};
+        this.isRenderLoopRunning = false;
 
         this.initMap(seededRandom);
         this.setupControls();
+        this.updateView();
         this.render();
     }
 
@@ -302,11 +304,17 @@ export class World {
     }
 
     render() {
-        if (!this.container.classList.contains('hidden')) {
-            this.draw();
-            this.drawMinimapOverlay();
-        }
-        requestAnimationFrame(() => this.render());
+        if (this.isRenderLoopRunning) return;
+        this.isRenderLoopRunning = true;
+
+        const loop = () => {
+            if (!this.container.classList.contains('hidden')) {
+                this.draw();
+                this.drawMinimapOverlay();
+            }
+            requestAnimationFrame(loop);
+        };
+        loop();
     }
 
     drawMinimapOverlay() {

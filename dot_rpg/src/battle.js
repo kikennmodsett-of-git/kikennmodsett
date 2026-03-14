@@ -155,6 +155,7 @@ export class Battle {
         });
 
         setTimeout(() => {
+            if (this.isFinished) return; // すでに勝利/逃走している場合は中止
             let damage = Math.max(1, this.monster.atk * 2 - totalStats.defense);
             if (isDefending) damage = Math.floor(damage / 2);
 
