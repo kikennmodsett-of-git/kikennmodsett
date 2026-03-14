@@ -12,13 +12,15 @@ class Game {
     constructor() {
         this.player = new Player("勇者");
         this.ui = new UI();
-        this.world = new World(this);
+        this.worldSeed = Math.random();
+        this.world = new World(this, this.worldSeed);
         this.inventory = new Inventory(this.player, this.ui);
         this.skillDB = SkillDB.generateSkills();
         this.allMonsters = MonsterData.generateMonsters();
         this.allQuests = QuestData.generateQuests();
         this.isLastBossDefeated = false;
         this.isBattleActive = false;
+        this.isLoaded = false;
 
         this.init();
     }
@@ -27,16 +29,16 @@ class Game {
         this.ui.log("Pixel Adventure Ver 2.0 へようこそ！");
         this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
 
-        // 初期スキル習得 (コモン)
-        this.player.learnSkill(this.skillDB[0]);
-        this.player.learnSkill(this.skillDB[3]);
-
-        document.getElementById('btn-status').onclick = () => this.inventory.showMainMenu();
-        document.getElementById('btn-quests').onclick = () => this.showQuests();
         document.getElementById('btn-save').onclick = () => this.saveGame();
 
         // 起動時にロードを試行
         this.loadGame();
+
+        // 初期スキル習得 (ロードしていない場合のみ)
+        if (!this.isLoaded) {
+            this.player.learnSkill(this.skillDB[0]);
+            this.player.learnSkill(this.skillDB[3]);
+        }
 
         this.showMainMap();
         this.ui.updateHeader(this.player);
@@ -146,6 +148,7 @@ class Game {
         if (quest) {
             quest.isAccepted = true;
             this.ui.log(`クエスト「${quest.title}」を引き受けた！`);
+            this.saveGame(); // オートセーブ
             this.showQuests();
         }
     }
@@ -400,6 +403,7 @@ class Game {
 
             this.player.addFusedSkill(newSkill);
             this.ui.log(`合体成功！ 新たな絶技「${newSkill.name}」を習得！`);
+            this.saveGame(); // オートセーブ
             this.ui.hideModal();
             this.fusionBuffer = [];
         }
@@ -450,6 +454,7 @@ class Game {
                 playerX: this.world.playerX,
                 playerY: this.world.playerY
             },
+            worldSeed: this.worldSeed,
             quests: this.allQuests.map(q => ({
                 id: q.id,
                 isAccepted: q.isAccepted,
@@ -479,9 +484,12 @@ class Game {
             // プレイヤーデータの復元
             Object.assign(this.player, data.player);
 
-            // ワールドの座標復元
+            // ワールドシードと座標復元
+            this.worldSeed = data.worldSeed || Math.random();
+            this.world = new World(this, this.worldSeed);
             this.world.playerX = data.player.playerX;
             this.world.playerY = data.player.playerY;
+            this.isLoaded = true;
 
             // クエスト状況の復元
             data.quests.forEach(savedQ => {

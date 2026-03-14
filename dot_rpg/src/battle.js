@@ -1,3 +1,4 @@
+import { SkillDB } from './skill_db.js';
 import { MonsterData } from './data/monsters.js';
 
 export class Battle {
@@ -79,37 +80,35 @@ export class Battle {
     }
 
     executeSkill(skill) {
-        import('./skill_db.js').then(({ SkillDB }) => {
-            const totalStats = this.player.getTotalStats();
-            if (skill.healing) {
-                // 回復スキルの処理
-                const recover = Math.floor(skill.power * (totalStats.attack / 8) + 10);
-                this.player.hp = Math.min(this.player.maxHp, this.player.hp + recover);
-                this.ui.log(`${this.player.name} の ${skill.name}！ 体力を ${recover} 回復した。`);
-                this.ui.updateHeader(this.player);
-            } else {
-                // 攻撃スキルの処理
-                const multiplier = SkillDB.getElementalMultiplier(skill.element, this.monster.element);
-                this.ui.log(`${this.player.name} の ${skill.name}！ (${skill.element}属性)`);
-                if (multiplier > 1.0) this.ui.log("効果はバツグンだ！");
-                if (multiplier < 1.0) this.ui.log("効果はいまひとつのようだ...");
+        const totalStats = this.player.getTotalStats();
+        if (skill.healing) {
+            // 回復スキルの処理
+            const recover = Math.floor(skill.power * (totalStats.attack / 8) + 10);
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + recover);
+            this.ui.log(`${this.player.name} の ${skill.name}！ 体力を ${recover} 回復した。`);
+            this.ui.updateHeader(this.player);
+        } else {
+            // 攻撃スキルの処理
+            const multiplier = SkillDB.getElementalMultiplier(skill.element, this.monster.element);
+            this.ui.log(`${this.player.name} の ${skill.name}！ (${skill.element}属性)`);
+            if (multiplier > 1.0) this.ui.log("効果はバツグンだ！");
+            if (multiplier < 1.0) this.ui.log("効果はいまひとつのようだ...");
 
-                let damage = Math.floor(skill.power * (totalStats.attack / 5) * multiplier);
-                damage = Math.max(1, damage - Math.floor(this.monster.def / 2));
+            let damage = Math.floor(skill.power * (totalStats.attack / 5) * multiplier);
+            damage = Math.max(1, damage - Math.floor(this.monster.def / 2));
 
-                this.monster.hp -= damage;
-                this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
-            }
+            this.monster.hp -= damage;
+            this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
+        }
 
-            // CT設定
-            skill.currentCooldown = skill.cooldown;
+        // CT設定
+        skill.currentCooldown = skill.cooldown;
 
-            if (this.monster.hp <= 0) {
-                this.win();
-            } else {
-                this.monsterTurn();
-            }
-        });
+        if (this.monster.hp <= 0) {
+            this.win();
+        } else {
+            this.monsterTurn();
+        }
     }
 
     executeAttack(attacker, target, isPlayer) {
@@ -246,6 +245,7 @@ export class Battle {
         }
 
         this.ui.updateHeader(this.player);
+        window.game.saveGame(); // 戦闘勝利時にオートセーブ
         this.endBattle();
     }
 

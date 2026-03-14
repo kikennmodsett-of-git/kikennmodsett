@@ -1,7 +1,8 @@
 export class World {
-    constructor(game) {
+    constructor(game, seed = null) {
         this.game = game;
         this.ui = game.ui;
+        this.seed = seed || Math.random();
         this.container = document.getElementById('world-container');
         this.canvas = document.getElementById('world-map-canvas');
         this.ctx = this.canvas.getContext('2d', { alpha: false });
@@ -18,6 +19,13 @@ export class World {
         this.canvas.width = this.container.offsetWidth;
         this.canvas.height = this.container.offsetHeight;
 
+        // シードベースの乱数生成器
+        this.rngValue = this.seed;
+        const seededRandom = () => {
+            const x = Math.sin(this.rngValue++) * 10000;
+            return x - Math.floor(x);
+        };
+
         // 固定拠点
         this.locations = [
             { id: 'town_start', name: "始まりの町", x: 10, y: 10, type: 'town', npcs: [{ name: "村長", message: "100万タイルの大台へようこそ！" }] },
@@ -29,13 +37,13 @@ export class World {
             { id: 'dungeon_last', name: "終焉の地 (Last)", x: 990, y: 990, type: 'dungeon', recLv: 1000 }
         ];
 
-        // 100箇所の拠点をランダム分散配置
+        // 100箇所の拠点をシードに基づき分散配置
         for (let i = 1; i <= 95; i++) {
             this.locations.push({
                 id: `landmark_${i}`, name: `未知の遺跡 #${i}`,
-                x: Math.floor(Math.random() * 980) + 10,
-                y: Math.floor(Math.random() * 980) + 10,
-                type: Math.random() < 0.3 ? 'town' : 'dungeon',
+                x: Math.floor(seededRandom() * 980) + 10,
+                y: Math.floor(seededRandom() * 980) + 10,
+                type: seededRandom() < 0.3 ? 'town' : 'dungeon',
                 recLv: 50 + i * 10
             });
         }
@@ -45,19 +53,19 @@ export class World {
         this.isMoving = false;
         this.keys = {};
 
-        this.initMap();
+        this.initMap(seededRandom);
         this.setupControls();
         this.render();
     }
 
-    initMap() {
+    initMap(seededRandom) {
         const seeds = [];
         for (let i = 0; i < 150; i++) {
             seeds.push({
-                x: Math.floor(Math.random() * this.mapSize),
-                y: Math.floor(Math.random() * this.mapSize),
+                x: Math.floor(seededRandom() * this.mapSize),
+                y: Math.floor(seededRandom() * this.mapSize),
                 type: i < 50 ? 'forest' : (i < 100 ? 'mountain' : 'water'),
-                radius: 8 + Math.random() * 20
+                radius: 8 + seededRandom() * 20
             });
         }
 
