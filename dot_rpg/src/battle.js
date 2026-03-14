@@ -80,6 +80,7 @@ export class Battle {
     }
 
     executeSkill(skill) {
+        this.ui.clearActionPanel(); // 連打防止: 選択した瞬間にボタンを消す
         const totalStats = this.player.getTotalStats();
         if (skill.healing) {
             // 回復スキルの処理
@@ -112,6 +113,7 @@ export class Battle {
     }
 
     executeAttack(attacker, target, isPlayer) {
+        if (isPlayer) this.ui.clearActionPanel(); // 連打防止
         const totalStats = this.player.getTotalStats();
         let damage = Math.max(1, (attacker === this.player ? totalStats.attack : attacker.atk) * 2 - (target === this.player ? totalStats.defense : target.def));
         target.hp -= damage;
@@ -127,11 +129,13 @@ export class Battle {
     }
 
     executeDefend() {
+        this.ui.clearActionPanel(); // 連打防止
         this.ui.log(`${this.player.name} は身を固めた！`);
         this.monsterTurn(true);
     }
 
     executeEscape() {
+        this.ui.clearActionPanel(); // 連打防止
         const totalStats = this.player.getTotalStats();
         const success = (Math.random() * totalStats.agility) > (Math.random() * this.monster.spd * 0.5);
         if (success) {
@@ -266,7 +270,8 @@ export class Battle {
         this.ui.log(`${this.player.name} は力尽きた...`);
         this.isFinished = true;
         this.ui.clearActionPanel();
-        this.ui.log("目の前が真っ暗になった。");
+        this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。町へ戻ります...</span>");
+        this.ui.log("<small style='color:#888;'>※直前のオートセーブ地点（町や戦闘開始時）から冒険を再開します。</small>");
 
         setTimeout(() => {
             window.game.respawnPlayer();

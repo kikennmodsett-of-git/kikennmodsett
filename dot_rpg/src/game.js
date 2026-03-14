@@ -9,10 +9,9 @@ import { SkillDB } from './skill_db.js';
 import { FusionSystem } from './fusion.js';
 
 class Game {
-    static isInitialized = false;
     constructor() {
-        if (Game.isInitialized) return;
-        Game.isInitialized = true;
+        if (window.isGameInitialized) return;
+        window.isGameInitialized = true;
 
         this.player = new Player("勇者");
         this.ui = new UI();
