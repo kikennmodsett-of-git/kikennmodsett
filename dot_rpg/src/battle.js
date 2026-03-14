@@ -245,7 +245,7 @@ export class Battle {
         }
 
         this.ui.updateHeader(this.player);
-        window.game.saveGame(); // 戦闘勝利時にオートセーブ
+        window.game.saveGame('auto'); // 戦闘勝利時にオートセーブ
         this.endBattle();
     }
 

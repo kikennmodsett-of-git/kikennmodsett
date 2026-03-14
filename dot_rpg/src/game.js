@@ -29,7 +29,9 @@ class Game {
         this.ui.log("Pixel Adventure Ver 2.0 へようこそ！");
         this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
 
-        document.getElementById('btn-save').onclick = () => this.saveGame();
+        document.getElementById('btn-status').onclick = () => this.inventory.showMainMenu();
+        document.getElementById('btn-quests').onclick = () => this.showQuests();
+        document.getElementById('btn-save').onclick = () => this.saveGame('manual');
 
         // 起動時にロードを試行
         this.loadGame();
@@ -148,7 +150,7 @@ class Game {
         if (quest) {
             quest.isAccepted = true;
             this.ui.log(`クエスト「${quest.title}」を引き受けた！`);
-            this.saveGame(); // オートセーブ
+            this.saveGame('auto'); // オートセーブ
             this.showQuests();
         }
     }
@@ -403,7 +405,7 @@ class Game {
 
             this.player.addFusedSkill(newSkill);
             this.ui.log(`合体成功！ 新たな絶技「${newSkill.name}」を習得！`);
-            this.saveGame(); // オートセーブ
+            this.saveGame('auto'); // オートセーブ
             this.ui.hideModal();
             this.fusionBuffer = [];
         }
@@ -433,8 +435,9 @@ class Game {
     }
 
     // セーブ処理
-    saveGame() {
+    saveGame(type = 'manual') {
         const saveData = {
+            updatedAt: Date.now(),
             player: {
                 name: this.player.name,
                 level: this.player.level,
@@ -464,9 +467,12 @@ class Game {
             isLastBossDefeated: this.isLastBossDefeated
         };
 
+        const key = type === 'manual' ? 'pixel_adventure_save_manual' : 'pixel_adventure_save_auto';
+
         try {
-            localStorage.setItem('pixel_adventure_save', JSON.stringify(saveData));
-            this.ui.log("【システム】データをセーブしました。");
+            localStorage.setItem(key, JSON.stringify(saveData));
+            const msg = type === 'manual' ? "【システム】データをセーブしました。" : "【システム】オートセーブ完了。";
+            this.ui.log(msg);
         } catch (e) {
             console.error("Save failed:", e);
             this.ui.log("【システム】セーブに失敗しました。");
@@ -475,20 +481,43 @@ class Game {
 
     // ロード処理
     loadGame() {
-        const json = localStorage.getItem('pixel_adventure_save');
-        if (!json) return;
+        const manualJson = localStorage.getItem('pixel_adventure_save_manual');
+        const autoJson = localStorage.getItem('pixel_adventure_save_auto');
+
+        // 以前のキーも考慮（マイグレーション）
+        const oldJson = localStorage.getItem('pixel_adventure_save');
+        let manualData = manualJson ? JSON.parse(manualJson) : (oldJson ? JSON.parse(oldJson) : null);
+        let autoData = autoJson ? JSON.parse(autoJson) : null;
+
+        let data = null;
+        if (manualData && autoData) {
+            data = manualData.updatedAt > autoData.updatedAt ? manualData : autoData;
+        } else {
+            data = manualData || autoData;
+        }
+
+        if (!data) return;
 
         try {
-            const data = JSON.parse(json);
-
             // プレイヤーデータの復元
             Object.assign(this.player, data.player);
 
             // ワールドシードと座標復元
+            // インスタンスを再作成せず、既存のworldを更新する（重要：描画ループ重複回避）
             this.worldSeed = data.worldSeed || Math.random();
-            this.world = new World(this, this.worldSeed);
+            this.world.seed = this.worldSeed;
+            this.world.rngValue = this.worldSeed;
             this.world.playerX = data.player.playerX;
             this.world.playerY = data.player.playerY;
+
+            // マップデータの再初期化が必要
+            const seededRandom = () => {
+                const x = Math.sin(this.world.rngValue++) * 10000;
+                return x - Math.floor(x);
+            };
+            this.world.initMap(seededRandom);
+            this.world.updateView();
+
             this.isLoaded = true;
 
             // クエスト状況の復元
