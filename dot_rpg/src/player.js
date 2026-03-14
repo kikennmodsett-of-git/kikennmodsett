@@ -28,7 +28,7 @@ export class Player {
 
         // 装備スロットの拡張
         this.equipment = {
-            weapon: { name: "ひのきの棒", atk: 2 },
+            weapon: { name: "ひのきの棒", atk: 2, type: "weapon" },
             head: null,
             chest: null,
             legs: null,
