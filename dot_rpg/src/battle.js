@@ -66,13 +66,13 @@ export class Battle {
             };
             const borderColor = elementColors[skill.element] || "var(--accent-color)";
 
-            this.ui.addAction(`<span style="color: ${skill.rarityColor || '#fff'}">${btnText}</span>`, () => {
+            this.ui.addAction(btnText, () => {
                 if (ct > 0) {
                     this.ui.log(`${skill.name} はまだ使えない！ (あと ${ct} ターン)`);
                     return;
                 }
                 this.executeSkill(skill);
-            }, `border: 2px solid ${borderColor}`);
+            }, `border: 2px solid ${borderColor}; color: ${skill.rarityColor || '#fff'}`);
         });
 
         this.ui.addAction("戻る", () => this.playerTurn());
