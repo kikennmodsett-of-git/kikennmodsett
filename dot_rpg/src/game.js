@@ -9,7 +9,11 @@ import { SkillDB } from './skill_db.js';
 import { FusionSystem } from './fusion.js';
 
 class Game {
+    static isInitialized = false;
     constructor() {
+        if (Game.isInitialized) return;
+        Game.isInitialized = true;
+
         this.player = new Player("勇者");
         this.ui = new UI();
         this.worldSeed = Math.random();
@@ -21,6 +25,7 @@ class Game {
         this.isLastBossDefeated = false;
         this.isBattleActive = false;
         this.isLoaded = false;
+        this.isLoading = false;
 
         this.init();
     }
@@ -470,19 +475,23 @@ class Game {
 
         const key = type === 'manual' ? 'pixel_adventure_save_manual' : 'pixel_adventure_save_auto';
 
-        try {
-            localStorage.setItem(key, JSON.stringify(saveData));
-            const msg = type === 'manual' ? "【システム】データをセーブしました。" : "【システム】オートセーブ完了。";
-            this.ui.log(msg);
-        } catch (e) {
-            console.error("Save failed:", e);
-            this.ui.log("【システム】セーブに失敗しました。");
-        }
+        // 非同期風に実行してメインスレッドの詰まりを軽減
+        setTimeout(() => {
+            try {
+                localStorage.setItem(key, JSON.stringify(saveData));
+                const msg = type === 'manual' ? "【システム】データをセーブしました。" : "【システム】オートセーブ完了。";
+                this.ui.log(msg);
+            } catch (e) {
+                console.error("Save failed:", e);
+                this.ui.log("【システム】セーブに失敗しました。");
+            }
+        }, 0);
     }
 
     // ロード処理
     loadGame() {
-        if (this.isBattleActive) return; // 戦闘中はロードを制限して座標リセットを防ぐ
+        if (this.isBattleActive || this.isLoading) return; // 戦闘中やロード中は重複実行を制限
+        this.isLoading = true;
         const manualJson = localStorage.getItem('pixel_adventure_save_manual');
         const autoJson = localStorage.getItem('pixel_adventure_save_auto');
 
@@ -539,6 +548,8 @@ class Game {
         } catch (e) {
             console.error("Load failed:", e);
             this.ui.log("【システム】セーブデータが壊れています。");
+        } finally {
+            this.isLoading = false;
         }
     }
 }
