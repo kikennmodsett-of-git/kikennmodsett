@@ -31,6 +31,7 @@ class Game {
 
     init() {
         this.ui.log("Pixel Adventure Ver 2.0 へようこそ！");
+        this.ui.log("※オートロードは無効です。続きから遊ぶ場合は「ステータス > 設定」からロードしてください。");
         this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
 
         document.getElementById('btn-status').onclick = () => this.inventory.showMainMenu();
@@ -488,8 +489,12 @@ class Game {
         }, 0);
     }
 
-    // ロード処理 (type: 'manual', 'auto', または指定なしで最新を検索)
-    loadGame(type = null) {
+    // ロード処理 (type: 'manual' または 'auto')
+    loadGame(type) {
+        if (!type || (type !== 'manual' && type !== 'auto')) {
+            console.log("【システム】ロードタイプが指定されていないため、処理をスキップしました。");
+            return;
+        }
         if (this.isBattleActive || this.isLoading) return; // 戦闘中やロード中は重複実行を制限
         this.isLoading = true;
 
@@ -500,21 +505,13 @@ class Game {
         } else if (type === 'auto') {
             const json = localStorage.getItem('pixel_adventure_save_auto');
             data = json ? JSON.parse(json) : null;
-        } else {
-            // 指定がない場合は従来通り最新を検索
-            const manualJson = localStorage.getItem('pixel_adventure_save_manual') || localStorage.getItem('pixel_adventure_save');
-            const autoJson = localStorage.getItem('pixel_adventure_save_auto');
-            let manualData = manualJson ? JSON.parse(manualJson) : null;
-            let autoData = autoJson ? JSON.parse(autoJson) : null;
-
-            if (manualData && autoData) {
-                data = manualData.updatedAt > autoData.updatedAt ? manualData : autoData;
-            } else {
-                data = manualData || autoData;
-            }
         }
 
-        if (!data) return;
+        if (!data) {
+            this.ui.log(`【システム】${type === 'manual' ? '手動' : 'オート'}セーブデータが見つかりません。`);
+            this.isLoading = false;
+            return;
+        }
 
         try {
             // プレイヤーデータの復元
