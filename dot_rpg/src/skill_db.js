@@ -47,7 +47,7 @@ export const SkillDB = {
                 category: typeInfo.category,
                 isPassive: isPassive,
                 healing: typeInfo.healing || false,
-                rarity: rarity,
+                rarity: rarityInfo.name,
                 mpCost: isPassive ? 0 : (10 + Math.floor(i / 30)),
                 cooldown: isPassive ? 0 : 2 + Math.floor(i / 150),
                 currentCooldown: 0,
