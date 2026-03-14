@@ -270,12 +270,23 @@ export class Battle {
         this.ui.log(`${this.player.name} は力尽きた...`);
         this.isFinished = true;
         this.ui.clearActionPanel();
-        this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。冒険を再開するにはデータをロードしてください。</span>");
 
-        // 自動リスポーンを廃止し、手動ロードへの導線を表示
-        this.ui.addAction("データをロードして再開", () => {
-            window.game.inventory.showSettings(); // ロード画面（Settings内）を直接開く
-        }, "background: #ff4b2b; font-weight: bold;");
+        // セーブデータの存在確認
+        const hasSave = localStorage.getItem('pixel_adventure_save_manual') ||
+            localStorage.getItem('pixel_adventure_save_auto') ||
+            localStorage.getItem('pixel_adventure_save');
+
+        if (hasSave) {
+            this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。冒険を再開するにはデータをロードしてください。</span>");
+            this.ui.addAction("データをロードして再開", () => {
+                window.game.inventory.showSettings();
+            }, "background: #ff4b2b; font-weight: bold;");
+        } else {
+            this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。セーブデータがないため、初期地点から復帰します。</span>");
+            this.ui.addAction("始まりの町で復活する", () => {
+                window.game.respawnPlayer();
+            }, "background: #2ecc71; font-weight: bold;");
+        }
     }
 
     endBattle(customMsg) {
