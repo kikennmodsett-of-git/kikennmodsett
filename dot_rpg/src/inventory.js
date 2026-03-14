@@ -149,9 +149,10 @@ export class Inventory {
         } else {
             items.forEach((item, idx) => {
                 const statText = isWeapon ? `攻撃+${item.atk}` : Object.entries(item.stats || {}).map(([k, v]) => `${k}+${v}`).join(', ');
-                html += `<li>
+                const elementClass = item.element ? `skill-element-${item.element}` : "";
+                html += `<li class="${elementClass}" style="margin-bottom: 5px; padding: 5px; border-radius: 4px;">
                     <button onclick="game.inventory.changeEquip('${slotId}', ${idx})">装備する</button> 
-                    ${item.name} (${statText})
+                    ${item.name} (${statText} / ${item.element || '無'}属性)
                 </li>`;
             });
         }

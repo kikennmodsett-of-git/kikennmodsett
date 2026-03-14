@@ -66,7 +66,8 @@ export class Player {
         // 次のレベルで習得可能なスキルがあるかチェック (SkillDBから)
         // 実装を簡易化するため、window.gameのスキルDBを参照
         if (window.game && window.game.skillDB) {
-            const newSkills = window.game.skillDB.filter(s => s.condition === "level" && Math.floor(s.power / 2) <= this.level);
+            // 入手しやすくするため、パワーの1/4のレベルで習得可能にする
+            const newSkills = window.game.skillDB.filter(s => s.condition === "level" && Math.floor(s.power / 4) <= this.level);
             newSkills.forEach(s => {
                 if (this.learnSkill(s)) {
                     console.log(`新スキル「${s.name}」を自動習得しました。`);

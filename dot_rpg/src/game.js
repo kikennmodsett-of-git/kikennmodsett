@@ -78,15 +78,15 @@ class Game {
             const dist = Math.sqrt(Math.pow(this.world.playerX - startX, 2) + Math.pow(this.world.playerY - startY, 2));
 
             if (dist < 50) {
-                // 平原エリア (Lv.1〜25)
-                const baseLv = 1 + Math.floor(dist / 2);
-                minLv = Math.max(1, baseLv - 2);
-                maxLv = Math.min(25, baseLv + 2);
+                // 平原エリア (Lv.1〜10) - より初心者に優しく
+                const baseLv = 1 + Math.floor(dist / 10);
+                minLv = Math.max(1, baseLv - 1);
+                maxLv = Math.min(10, baseLv + 1);
             } else {
-                // 平原の外 (Lv.26〜)
-                const baseLv = 26 + Math.floor((dist - 50) / 1.5);
-                minLv = baseLv - 5;
-                maxLv = baseLv + 5;
+                // 平原の外 (Lv.11〜) - 上昇を緩やかに
+                const baseLv = 11 + Math.floor((dist - 50) / 4);
+                minLv = baseLv - 3;
+                maxLv = baseLv + 3;
             }
         }
 
@@ -178,7 +178,9 @@ class Game {
         let html = `<h3>総合ショップ</h3><p>厳選された装備品です。</p><div class="shop-grid">`;
 
         items.forEach((item, idx) => {
-            const price = Math.floor(item.price * (1 - discount));
+            // 基本価格を35%引きにし、さらに人徳割引を適用
+            const baseDiscountedPrice = Math.floor(item.price * 0.65);
+            const price = Math.floor(baseDiscountedPrice * (1 - discount));
             const statText = item.type === 'weapon' ? `攻撃+${item.atk}` :
                 Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', ');
 

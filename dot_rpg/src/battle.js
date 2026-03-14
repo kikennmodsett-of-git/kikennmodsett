@@ -220,7 +220,7 @@ export class Battle {
         const rollNormal = Math.random();
         const rollRare = Math.random();
 
-        const dropRateNormal = 0.5 + luckBonus;
+        const dropRateNormal = 0.75 + luckBonus; // ドロップ率を75%に向上
         const dropRateRare = 0.05 + luckBonus;
 
         const materialLevel = Math.floor(this.monster.level / 5) + 1;
