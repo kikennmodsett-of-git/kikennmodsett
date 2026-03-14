@@ -33,7 +33,10 @@ class Game {
 
         document.getElementById('btn-status').onclick = () => this.inventory.showMainMenu();
         document.getElementById('btn-quests').onclick = () => this.showQuests();
-        document.getElementById('btn-quests').onclick = () => this.showQuests();
+        document.getElementById('btn-save').onclick = () => this.saveGame();
+
+        // 起動時にロードを試行
+        this.loadGame();
 
         this.showMainMap();
         this.ui.updateHeader(this.player);
@@ -422,6 +425,81 @@ class Game {
                 this.ui.log(`${town.name} を復活の場所に設定しました。`);
                 this.openTownMenu(town);
             });
+        }
+    }
+
+    // セーブ処理
+    saveGame() {
+        const saveData = {
+            player: {
+                name: this.player.name,
+                level: this.player.level,
+                exp: this.player.exp,
+                nextLevelExp: this.player.nextLevelExp,
+                hp: this.player.hp,
+                maxHp: this.player.maxHp,
+                gold: this.player.gold,
+                statusPoints: this.player.statusPoints,
+                stats: this.player.stats,
+                skills: this.player.skills,
+                fusedSkills: this.player.fusedSkills,
+                equipment: this.player.equipment,
+                inventory: this.player.inventory,
+                materials: this.player.materials,
+                respawnPoint: this.player.respawnPoint,
+                playerX: this.world.playerX,
+                playerY: this.world.playerY
+            },
+            quests: this.allQuests.map(q => ({
+                id: q.id,
+                isAccepted: q.isAccepted,
+                isCompleted: q.isCompleted,
+                currentCount: q.currentCount
+            })),
+            isLastBossDefeated: this.isLastBossDefeated
+        };
+
+        try {
+            localStorage.setItem('pixel_adventure_save', JSON.stringify(saveData));
+            this.ui.log("【システム】データをセーブしました。");
+        } catch (e) {
+            console.error("Save failed:", e);
+            this.ui.log("【システム】セーブに失敗しました。");
+        }
+    }
+
+    // ロード処理
+    loadGame() {
+        const json = localStorage.getItem('pixel_adventure_save');
+        if (!json) return;
+
+        try {
+            const data = JSON.parse(json);
+
+            // プレイヤーデータの復元
+            Object.assign(this.player, data.player);
+
+            // ワールドの座標復元
+            this.world.playerX = data.player.playerX;
+            this.world.playerY = data.player.playerY;
+
+            // クエスト状況の復元
+            data.quests.forEach(savedQ => {
+                const quest = this.allQuests.find(q => q.id === savedQ.id);
+                if (quest) {
+                    quest.isAccepted = savedQ.isAccepted;
+                    quest.isCompleted = savedQ.isCompleted;
+                    quest.currentCount = savedQ.currentCount;
+                }
+            });
+
+            this.isLastBossDefeated = data.isLastBossDefeated || false;
+
+            this.ui.log("【システム】セーブデータをロードしました！冒険の再開です。");
+            this.ui.updateHeader(this.player);
+        } catch (e) {
+            console.error("Load failed:", e);
+            this.ui.log("【システム】セーブデータが壊れています。");
         }
     }
 }
