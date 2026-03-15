@@ -278,6 +278,16 @@ class Game {
 
     selectForgeCategory(cat) {
         this.forgeData.category = cat;
+        if (cat === 'armor') {
+            this.forgeData.slot = 'chest'; // デフォルト
+        } else {
+            this.forgeData.slot = 'weapon';
+        }
+        this.updateForgeUI();
+    }
+
+    selectForgeSlot(slot) {
+        this.forgeData.slot = slot;
         this.updateForgeUI();
     }
 
@@ -285,7 +295,27 @@ class Game {
         const area = document.getElementById('forge-dynamic-area');
         if (!area) return;
 
-        let html = `<h4>${this.forgeData.category === 'weapon' ? '武器' : '防具'}の素材選択</h4>`;
+        let html = "";
+
+        // カテゴリが防具の場合、部位選択ボタンを表示
+        if (this.forgeData.category === 'armor') {
+            const slots = [
+                { id: 'head', name: '頭' },
+                { id: 'chest', name: '胴' },
+                { id: 'legs', name: '脚' },
+                { id: 'feet', name: '足' },
+                { id: 'waist', name: '腰' }
+            ];
+            html += `<div style="margin-bottom: 10px; display: flex; gap: 5px; flex-wrap: wrap;">`;
+            slots.forEach(s => {
+                const active = this.forgeData.slot === s.id;
+                html += `<button onclick="window.game.selectForgeSlot('${s.id}')" style="font-size: 11px; padding: 4px 8px; ${active ? 'background:#ffaa00; font-weight:bold;' : 'background:#444;'}">${s.name}</button>`;
+            });
+            html += `</div>`;
+        }
+
+        const slotNames = { head: '頭', chest: '胴', legs: '脚', feet: '足', waist: '腰', weapon: '武器' };
+        html += `<h4>${slotNames[this.forgeData.slot] || '装備'}の素材選択</h4>`;
         const mats = Object.entries(this.player.materials).filter(([_, m]) => m.count > 0);
 
         if (mats.length === 0) {
@@ -340,6 +370,9 @@ class Game {
         }
 
         const isWeapon = this.forgeData.category === 'weapon';
+        const slot = this.forgeData.slot;
+        const slotNames = { head: '頭部', chest: '特製', legs: '脚部', feet: '足部', waist: '腰帯', weapon: '鍛造' };
+
         let element = elements.size > 0 ? Array.from(elements)[0] : "無";
 
         // デュアル属性判定 (2種類以上の属性素材があり、かつ低確率)
@@ -350,7 +383,7 @@ class Game {
         }
 
         const baseName = nameParts.length > 0 ? nameParts[0] : (isWeapon ? "なまくら" : "お古");
-        const finalName = `${baseName}の${isWeapon ? '鍛造剣' : '特製鎧'}`;
+        const finalName = `${baseName}の${slotNames[slot] || '防具'}${isWeapon ? '剣' : '鎧'}`;
 
         const newItem = isWeapon ? {
             type: 'weapon',
@@ -359,7 +392,7 @@ class Game {
             element: element
         } : {
             type: 'armor',
-            slot: 'chest',
+            slot: slot,
             name: finalName,
             stats: { defense: Math.floor(totalPower * 1.5) },
             element: element

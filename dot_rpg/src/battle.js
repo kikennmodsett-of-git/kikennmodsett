@@ -81,25 +81,31 @@ export class Battle {
 
     executeSkill(skill) {
         this.ui.clearActionPanel(); // 連打防止: 選択した瞬間にボタンを消す
-        const totalStats = this.player.getTotalStats();
         if (skill.healing) {
+            const totalStats = this.player.getTotalStats();
             // 回復スキルの処理
             const recover = Math.floor(skill.power * (totalStats.attack / 8) + 10);
             this.player.hp = Math.min(this.player.maxHp, this.player.hp + recover);
             this.ui.log(`${this.player.name} の ${skill.name}！ 体力を ${recover} 回復した。`);
             this.ui.updateHeader(this.player);
         } else {
-            // 攻撃スキルの処理
-            const multiplier = SkillDB.getElementalMultiplier(skill.element, this.monster.element);
-            this.ui.log(`${this.player.name} の ${skill.name}！ (${skill.element}属性)`);
-            if (multiplier > 1.0) this.ui.log("効果はバツグンだ！");
-            if (multiplier < 1.0) this.ui.log("効果はいまひとつのようだ...");
+            // 回避判定 (Lv.5以上の敵)
+            if (this.monster.level >= 5 && this.dodgeCheck(this.player, this.monster)) {
+                this.ui.log(`${this.monster.name} は攻撃を華麗に回避した！`);
+            } else {
+                const totalStats = this.player.getTotalStats();
+                // 攻撃スキルの処理
+                const multiplier = SkillDB.getElementalMultiplier(skill.element, this.monster.element);
+                this.ui.log(`${this.player.name} の ${skill.name}！ (${skill.element}属性)`);
+                if (multiplier > 1.0) this.ui.log("効果はバツグンだ！");
+                if (multiplier < 1.0) this.ui.log("効果はいまひとつのようだ...");
 
-            let damage = Math.floor(skill.power * (totalStats.attack / 5) * multiplier);
-            damage = Math.max(1, damage - Math.floor(this.monster.def / 2));
+                let damage = Math.floor(skill.power * (totalStats.attack / 5) * multiplier);
+                damage = Math.max(1, damage - Math.floor(this.monster.def / 2));
 
-            this.monster.hp -= damage;
-            this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
+                this.monster.hp -= damage;
+                this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
+            }
         }
 
         // CT設定
@@ -114,10 +120,22 @@ export class Battle {
 
     executeAttack(attacker, target, isPlayer) {
         if (isPlayer) this.ui.clearActionPanel(); // 連打防止
-        const totalStats = this.player.getTotalStats();
-        let damage = Math.max(1, (attacker === this.player ? totalStats.attack : attacker.atk) * 2 - (target === this.player ? totalStats.defense : target.def));
-        target.hp -= damage;
-        this.ui.log(`${attacker.name} の攻撃！ ${target.name} に ${damage} のダメージ！`);
+
+        // 回避判定
+        // プレイヤーの回避: 敏捷依存
+        // モンスターの回避: レベル5以上かつ敏捷依存
+        const isDodged = (target === this.monster) ?
+            (target.level >= 5 && this.dodgeCheck(attacker, target)) :
+            this.dodgeCheck(attacker, target);
+
+        if (isDodged) {
+            this.ui.log(`${target.name} は攻撃を回避した！`);
+        } else {
+            const totalStats = this.player.getTotalStats();
+            let damage = Math.max(1, (attacker === this.player ? totalStats.attack : attacker.atk) * 2 - (target === this.player ? totalStats.defense : target.def));
+            target.hp -= damage;
+            this.ui.log(`${attacker.name} の攻撃！ ${target.name} に ${damage} のダメージ！`);
+        }
 
         if (target.hp <= 0) {
             if (isPlayer) this.win();
@@ -126,6 +144,20 @@ export class Battle {
             if (isPlayer) this.monsterTurn();
             else this.playerTurn();
         }
+    }
+
+    // 回避判定ロジック
+    dodgeCheck(attacker, defender) {
+        const totalStats = this.player.getTotalStats();
+        const atkSpd = (attacker === this.player) ? totalStats.agility : attacker.spd;
+        const defSpd = (defender === this.player) ? totalStats.agility : defender.spd;
+
+        // 敏捷の差に基づいた回避率 (最大30%)
+        const baseDodgeRate = 0.05; // 基本5%
+        const speedBonus = Math.max(0, (defSpd - atkSpd) * 0.01);
+        const dodgeRate = Math.min(0.30, baseDodgeRate + speedBonus);
+
+        return Math.random() < dodgeRate;
     }
 
     executeDefend() {
@@ -160,11 +192,17 @@ export class Battle {
 
         setTimeout(() => {
             if (this.isFinished) return; // すでに勝利/逃走している場合は中止
-            let damage = Math.max(1, this.monster.atk * 2 - totalStats.defense);
-            if (isDefending) damage = Math.floor(damage / 2);
 
-            this.player.hp -= damage;
-            this.ui.log(`${this.monster.name} の攻撃！ ${this.player.name} は ${damage} のダメージを受けた！`);
+            // 回避判定
+            if (this.dodgeCheck(this.monster, this.player)) {
+                this.ui.log(`${this.player.name} は攻撃を回避した！`);
+            } else {
+                let damage = Math.max(1, this.monster.atk * 2 - totalStats.defense);
+                if (isDefending) damage = Math.floor(damage / 2);
+
+                this.player.hp -= damage;
+                this.ui.log(`${this.monster.name} の攻撃！ ${this.player.name} は ${damage} のダメージを受けた！`);
+            }
 
             // パッシブ発動チェック: ダメージを受けた時
             this.triggerPassives("onDamageTaken");
@@ -216,11 +254,11 @@ export class Battle {
         }
 
         // 素材ドロップ判定
-        const luckBonus = this.player.stats.luck * 0.001;
+        const luckBonus = this.player.stats.luck * 0.01; // 幸運ボーナスの影響を10倍に強化
         const rollNormal = Math.random();
         const rollRare = Math.random();
 
-        const dropRateNormal = 0.75 + luckBonus; // ドロップ率を75%に向上
+        const dropRateNormal = 0.75 + luckBonus;
         const dropRateRare = 0.05 + luckBonus;
 
         const materialLevel = Math.floor(this.monster.level / 5) + 1;
