@@ -280,13 +280,18 @@ class Game3D {
             this.gameOver(true);
         }
 
-        // Camera follow (Improved Visibility: Higher and further)
-        const cameraOffset = new THREE.Vector3(0, 8, 15);
+        // Camera follow (3rd Person Perspective Optimization)
+        // Offset: Behind and slightly above player
+        const cameraOffset = new THREE.Vector3(0, 4, 7);
         cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerRotation);
 
         const targetCamPos = this.player.position.clone().add(cameraOffset);
+        // Smoothly lerp camera position
         this.camera.position.lerp(targetCamPos, 0.1);
-        this.camera.lookAt(this.player.position.clone().add(new THREE.Vector3(0, 1, 0)));
+
+        // Look at a point slightly above the player's head for better visibility
+        const lookAtPos = this.player.position.clone().add(new THREE.Vector3(0, 1.5, 0));
+        this.camera.lookAt(lookAtPos);
     }
 
     gameOver(win) {
