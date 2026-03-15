@@ -113,6 +113,7 @@ class TaikoGame {
         const threshold = Math.max(0.01, maxEnergy * config.thresholdRatio);
         const minGap = config.minGap;
         let lastPeakTime = -1;
+        let lastRollEndTime = -5; // For interval control
 
         for (let i = 0; i < pcmData.length - frameSize; i += overlap) {
             let energy = 0;
@@ -124,28 +125,32 @@ class TaikoGame {
             if (energy > threshold) {
                 const time = i / sampleRate;
 
-                // Detect Sustained Energy for "Roll"
+                // Detect Sustained Energy for "Roll" (Added interval check and stricter duration)
                 let sustainEnd = i;
                 let lookAhead = i + overlap;
+                const rollThreshold = threshold * 1.1; // Stricter for rolls
+
                 while (lookAhead < pcmData.length - frameSize) {
                     let nextEnergy = 0;
                     for (let k = 0; k < frameSize; k++) nextEnergy += Math.abs(pcmData[lookAhead + k]);
-                    if (nextEnergy / frameSize < threshold * 0.8) break;
+                    if (nextEnergy / frameSize < rollThreshold * 0.8) break;
                     sustainEnd = lookAhead;
                     lookAhead += overlap;
                 }
 
                 const duration = (sustainEnd - i) / sampleRate;
 
-                if (duration > 0.5) { // 0.5s+ of energy is a Roll
+                // Only allow Roll if it's long enough AND we haven't had one recently (5s interval)
+                if (duration > 0.8 && time > lastRollEndTime + 5.0) {
                     detections.push({
                         time: time,
-                        duration: Math.min(duration, 3.0), // Cap at 3s
+                        duration: Math.min(duration, 2.5), // Cap at 2.5s
                         type: 2 // Roll
                     });
-                    i = sustainEnd + (minGap * sampleRate); // Skip past the roll
-                    lastPeakTime = (sustainEnd / sampleRate); // Update last peak time to end of roll
-                } else if (time - lastPeakTime > minGap) { // Regular note detection
+                    i = sustainEnd + (minGap * sampleRate);
+                    lastPeakTime = (sustainEnd / sampleRate);
+                    lastRollEndTime = (sustainEnd / sampleRate);
+                } else if (time - lastPeakTime > minGap) {
                     detections.push({
                         time: time,
                         duration: 0,
