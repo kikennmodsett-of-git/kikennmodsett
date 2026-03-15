@@ -119,12 +119,10 @@ class TaikoGame {
         const overlap = 512;
         const detections = [];
 
-        // Use pre-calculated Max Energy and Energy Map
         const config = this.diffConfig[this.difficulty];
         const threshold = Math.max(0.01, this.maxEnergy * config.thresholdRatio);
         const minGap = config.minGap;
         let lastPeakTime = -1;
-        let lastRollEndTime = -5;
 
         for (let i = 0; i < this.energyMap.length; i++) {
             const energy = this.energyMap[i];
@@ -132,27 +130,7 @@ class TaikoGame {
             if (energy > threshold) {
                 const time = (i * overlap) / sampleRate;
 
-                // Detect Sustained Energy for "Roll" using Energy Map
-                let sustainEndIndex = i;
-                const rollThreshold = threshold * 1.1;
-
-                while (sustainEndIndex + 1 < this.energyMap.length) {
-                    if (this.energyMap[sustainEndIndex + 1] < rollThreshold * 0.8) break;
-                    sustainEndIndex++;
-                }
-
-                const duration = ((sustainEndIndex - i) * overlap) / sampleRate;
-
-                if (duration > 0.8 && time > lastRollEndTime + 5.0) {
-                    detections.push({
-                        time: time,
-                        duration: Math.min(duration, 2.5),
-                        type: 2
-                    });
-                    i = sustainEndIndex + Math.floor((minGap * sampleRate) / overlap);
-                    lastPeakTime = (sustainEndIndex * overlap) / sampleRate;
-                    lastRollEndTime = lastPeakTime;
-                } else if (time - lastPeakTime > minGap) {
+                if (time - lastPeakTime > minGap) {
                     detections.push({
                         time: time,
                         duration: 0,
@@ -163,7 +141,7 @@ class TaikoGame {
             }
         }
 
-        // 3. Fallback (If no notes, generate periodically)
+        // Fallback
         if (detections.length === 0) {
             const songDuration = this.audioBuffer.duration;
             for (let t = 2; t < songDuration - 2; t += 1.0) {
@@ -206,16 +184,6 @@ class TaikoGame {
     }
 
     checkHit(time, type) {
-        // Special case: Roll (type: 2)
-        const roll = this.notes.find(n => n.type === 2 && time >= n.time - 0.1 && time <= n.time + n.duration + 0.1);
-        if (roll) {
-            this.score += 20;
-            this.stats.good++; // Count as good for result but don't show pop-up every hit
-            this.showJudgment('連打！', true);
-            this.updateUI();
-            return;
-        }
-
         // Find the closest unhit note of the same type
         const target = this.notes.find(n => !n.hit && (n.type === 0 || n.type === 1) && Math.abs(n.time - time) < this.judgmentWindows.bad);
 
@@ -249,16 +217,14 @@ class TaikoGame {
         }
     }
 
-    showJudgment(text, isRoll = false) {
+    showJudgment(text) {
         const el = document.getElementById('judgment');
         el.innerText = text.toUpperCase();
-        el.style.color = isRoll ? '#ffcc00' : (text === 'good' ? '#ffcc00' : (text === 'nice' ? '#00ffcc' : '#ff3333'));
+        el.style.color = text === 'good' ? '#ffcc00' : (text === 'nice' ? '#00ffcc' : '#ff3333');
 
-        if (!isRoll || Math.random() > 0.5) { // Reduce flicker for roll
-            el.classList.remove('pop-anim');
-            void el.offsetWidth;
-            el.classList.add('pop-anim');
-        }
+        el.classList.remove('pop-anim');
+        void el.offsetWidth;
+        el.classList.add('pop-anim');
     }
 
     updateUI() {
@@ -311,28 +277,6 @@ class TaikoGame {
             if (note.hit) return;
 
             const x = this.judgmentX + (note.time - this.currentTime) * this.noteSpeed;
-
-            // Special Drawing for Roll
-            if (note.type === 2) {
-                const endX = x + note.duration * this.noteSpeed;
-                if (endX < -100 || x > this.canvas.width + 100) return;
-
-                // Draw Roll Bar
-                this.ctx.fillStyle = '#ffcc00'; // Yellow
-                this.ctx.beginPath();
-                this.ctx.roundRect(x, this.laneY - this.noteRadius, endX - x, this.noteRadius * 2, this.noteRadius);
-                this.ctx.fill();
-                this.ctx.strokeStyle = 'white';
-                this.ctx.lineWidth = 2;
-                this.ctx.stroke();
-
-                // Roll text
-                this.ctx.fillStyle = '#333';
-                this.ctx.font = 'bold 18px Noto Sans JP';
-                this.ctx.fillText('連打', x + 30, this.laneY);
-                return;
-            }
-
             if (x < -100 || x > this.canvas.width + 100) return;
 
             this.ctx.beginPath();
@@ -355,7 +299,7 @@ class TaikoGame {
     endGame() {
         this.isPlaying = false;
 
-        const clearThreshold = this.chart.length * 40; // 40 score per note average
+        const clearThreshold = this.chart.length * 45; // Adjusted threshold (45 score per note)
         const isClear = this.score >= clearThreshold;
 
         document.getElementById('result-overlay').classList.remove('hidden');
