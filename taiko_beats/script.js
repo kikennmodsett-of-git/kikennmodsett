@@ -81,6 +81,10 @@ class TaikoGame {
             this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             this.audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
 
+            // Pre-calculate Energy Map for performance
+            document.getElementById('status').innerText = '楽曲を解析しています...';
+            this.prepareEnergyMap();
+
             document.getElementById('difficulty-selection').classList.remove('hidden');
             await this.generateChart();
             document.getElementById('start-btn').disabled = false;
@@ -90,30 +94,12 @@ class TaikoGame {
         }
     }
 
-    async generateChart() {
+    prepareEnergyMap() {
         const pcmData = this.audioBuffer.getChannelData(0);
-        const sampleRate = this.audioBuffer.sampleRate;
-        const detections = [];
-
         const frameSize = 1024;
         const overlap = 512;
-
-        // 1. Scan for Max Energy
-        let maxEnergy = 0;
-        for (let i = 0; i < pcmData.length - frameSize; i += overlap * 4) {
-            let energy = 0;
-            for (let j = 0; j < frameSize; j++) {
-                energy += Math.abs(pcmData[i + j]);
-            }
-            if (energy / frameSize > maxEnergy) maxEnergy = energy / frameSize;
-        }
-
-        // 2. Dynamic Analysis
-        const config = this.diffConfig[this.difficulty];
-        const threshold = Math.max(0.01, maxEnergy * config.thresholdRatio);
-        const minGap = config.minGap;
-        let lastPeakTime = -1;
-        let lastRollEndTime = -5; // For interval control
+        this.energyMap = [];
+        this.maxEnergy = 0;
 
         for (let i = 0; i < pcmData.length - frameSize; i += overlap) {
             let energy = 0;
@@ -121,35 +107,51 @@ class TaikoGame {
                 energy += Math.abs(pcmData[i + j]);
             }
             energy /= frameSize;
+            this.energyMap.push(energy);
+            if (energy > this.maxEnergy) this.maxEnergy = energy;
+        }
+    }
+
+    async generateChart() {
+        if (!this.energyMap) return;
+
+        const sampleRate = this.audioBuffer.sampleRate;
+        const overlap = 512;
+        const detections = [];
+
+        // Use pre-calculated Max Energy and Energy Map
+        const config = this.diffConfig[this.difficulty];
+        const threshold = Math.max(0.01, this.maxEnergy * config.thresholdRatio);
+        const minGap = config.minGap;
+        let lastPeakTime = -1;
+        let lastRollEndTime = -5;
+
+        for (let i = 0; i < this.energyMap.length; i++) {
+            const energy = this.energyMap[i];
 
             if (energy > threshold) {
-                const time = i / sampleRate;
+                const time = (i * overlap) / sampleRate;
 
-                // Detect Sustained Energy for "Roll" (Added interval check and stricter duration)
-                let sustainEnd = i;
-                let lookAhead = i + overlap;
-                const rollThreshold = threshold * 1.1; // Stricter for rolls
+                // Detect Sustained Energy for "Roll" using Energy Map
+                let sustainEndIndex = i;
+                const rollThreshold = threshold * 1.1;
 
-                while (lookAhead < pcmData.length - frameSize) {
-                    let nextEnergy = 0;
-                    for (let k = 0; k < frameSize; k++) nextEnergy += Math.abs(pcmData[lookAhead + k]);
-                    if (nextEnergy / frameSize < rollThreshold * 0.8) break;
-                    sustainEnd = lookAhead;
-                    lookAhead += overlap;
+                while (sustainEndIndex + 1 < this.energyMap.length) {
+                    if (this.energyMap[sustainEndIndex + 1] < rollThreshold * 0.8) break;
+                    sustainEndIndex++;
                 }
 
-                const duration = (sustainEnd - i) / sampleRate;
+                const duration = ((sustainEndIndex - i) * overlap) / sampleRate;
 
-                // Only allow Roll if it's long enough AND we haven't had one recently (5s interval)
                 if (duration > 0.8 && time > lastRollEndTime + 5.0) {
                     detections.push({
                         time: time,
-                        duration: Math.min(duration, 2.5), // Cap at 2.5s
-                        type: 2 // Roll
+                        duration: Math.min(duration, 2.5),
+                        type: 2
                     });
-                    i = sustainEnd + (minGap * sampleRate);
-                    lastPeakTime = (sustainEnd / sampleRate);
-                    lastRollEndTime = (sustainEnd / sampleRate);
+                    i = sustainEndIndex + Math.floor((minGap * sampleRate) / overlap);
+                    lastPeakTime = (sustainEndIndex * overlap) / sampleRate;
+                    lastRollEndTime = lastPeakTime;
                 } else if (time - lastPeakTime > minGap) {
                     detections.push({
                         time: time,
