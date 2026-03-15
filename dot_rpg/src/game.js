@@ -50,14 +50,24 @@ class Game {
             this.player.learnSkill(this.skillDB[0]);
             this.player.learnSkill(this.skillDB[3]);
         }
+
+        // ポートフォリオ等からの「すぐに遊べる」対応 (クエリパラメータ play=true)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('play') === 'true') {
+            this.startGame(true); // 即時開始
+        }
     }
 
-    startGame() {
+    startGame(immediate = false) {
         // タイトル画面をフェードアウト
         const titleOverlay = document.getElementById('title-screen-overlay');
         if (titleOverlay) {
-            titleOverlay.classList.add('fade-out');
-            setTimeout(() => titleOverlay.classList.add('hidden'), 800);
+            if (immediate) {
+                titleOverlay.classList.add('hidden');
+            } else {
+                titleOverlay.classList.add('fade-out');
+                setTimeout(() => titleOverlay.classList.add('hidden'), 800);
+            }
         }
 
         // メインUIを表示
