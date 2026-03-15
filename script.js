@@ -92,34 +92,3 @@ style.innerHTML = `
     }
 `;
 document.head.appendChild(style);
-// Game Modal Logic
-const gameModal = document.getElementById('game-modal');
-const gameIframe = document.getElementById('game-iframe');
-const closeModal = document.getElementById('close-modal');
-const modalBackdrop = document.querySelector('.modal-backdrop');
-const playButtons = document.querySelectorAll('.play-button');
-
-playButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const url = btn.getAttribute('data-url');
-        gameIframe.src = url;
-        gameModal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // 背景スクロール禁止
-    });
-});
-
-const closeGameModal = () => {
-    gameModal.classList.remove('active');
-    gameIframe.src = ''; // 音や処理を止める
-    document.body.style.overflow = 'auto'; // スクロール復帰
-};
-
-closeModal.addEventListener('click', closeGameModal);
-modalBackdrop.addEventListener('click', closeGameModal);
-
-// Close on Escape key
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && gameModal.classList.contains('active')) {
-        closeGameModal();
-    }
-});
