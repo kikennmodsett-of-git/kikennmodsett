@@ -100,7 +100,7 @@ class TaikoGame {
 
         // 1. Scan for Max Energy
         let maxEnergy = 0;
-        for (let i = 0; i < pcmData.length - frameSize; i += overlap * 4) { // Fast scan
+        for (let i = 0; i < pcmData.length - frameSize; i += overlap * 4) {
             let energy = 0;
             for (let j = 0; j < frameSize; j++) {
                 energy += Math.abs(pcmData[i + j]);
@@ -123,9 +123,32 @@ class TaikoGame {
 
             if (energy > threshold) {
                 const time = i / sampleRate;
-                if (time - lastPeakTime > minGap) {
+
+                // Detect Sustained Energy for "Roll"
+                let sustainEnd = i;
+                let lookAhead = i + overlap;
+                while (lookAhead < pcmData.length - frameSize) {
+                    let nextEnergy = 0;
+                    for (let k = 0; k < frameSize; k++) nextEnergy += Math.abs(pcmData[lookAhead + k]);
+                    if (nextEnergy / frameSize < threshold * 0.8) break;
+                    sustainEnd = lookAhead;
+                    lookAhead += overlap;
+                }
+
+                const duration = (sustainEnd - i) / sampleRate;
+
+                if (duration > 0.5) { // 0.5s+ of energy is a Roll
                     detections.push({
                         time: time,
+                        duration: Math.min(duration, 3.0), // Cap at 3s
+                        type: 2 // Roll
+                    });
+                    i = sustainEnd + (minGap * sampleRate); // Skip past the roll
+                    lastPeakTime = (sustainEnd / sampleRate); // Update last peak time to end of roll
+                } else if (time - lastPeakTime > minGap) { // Regular note detection
+                    detections.push({
+                        time: time,
+                        duration: 0,
                         type: Math.random() > 0.7 ? 1 : 0
                     });
                     lastPeakTime = time;
@@ -137,7 +160,7 @@ class TaikoGame {
         if (detections.length === 0) {
             const songDuration = this.audioBuffer.duration;
             for (let t = 2; t < songDuration - 2; t += 1.0) {
-                detections.push({ time: t, type: 0 });
+                detections.push({ time: t, duration: 0, type: 0 });
             }
         }
 
@@ -176,8 +199,18 @@ class TaikoGame {
     }
 
     checkHit(time, type) {
+        // Special case: Roll (type: 2)
+        const roll = this.notes.find(n => n.type === 2 && time >= n.time - 0.1 && time <= n.time + n.duration + 0.1);
+        if (roll) {
+            this.score += 20;
+            this.stats.good++; // Count as good for result but don't show pop-up every hit
+            this.showJudgment('連打！', true);
+            this.updateUI();
+            return;
+        }
+
         // Find the closest unhit note of the same type
-        const target = this.notes.find(n => !n.hit && Math.abs(n.time - time) < this.judgmentWindows.bad);
+        const target = this.notes.find(n => !n.hit && (n.type === 0 || n.type === 1) && Math.abs(n.time - time) < this.judgmentWindows.bad);
 
         if (target && target.type === type) {
             const diff = Math.abs(target.time - time);
@@ -209,13 +242,16 @@ class TaikoGame {
         }
     }
 
-    showJudgment(text) {
+    showJudgment(text, isRoll = false) {
         const el = document.getElementById('judgment');
         el.innerText = text.toUpperCase();
-        el.style.color = text === 'good' ? '#ffcc00' : (text === 'nice' ? '#00ffcc' : '#ff3333');
-        el.classList.remove('pop-anim');
-        void el.offsetWidth; // Trigger reflow
-        el.classList.add('pop-anim');
+        el.style.color = isRoll ? '#ffcc00' : (text === 'good' ? '#ffcc00' : (text === 'nice' ? '#00ffcc' : '#ff3333'));
+
+        if (!isRoll || Math.random() > 0.5) { // Reduce flicker for roll
+            el.classList.remove('pop-anim');
+            void el.offsetWidth;
+            el.classList.add('pop-anim');
+        }
     }
 
     updateUI() {
@@ -268,6 +304,28 @@ class TaikoGame {
             if (note.hit) return;
 
             const x = this.judgmentX + (note.time - this.currentTime) * this.noteSpeed;
+
+            // Special Drawing for Roll
+            if (note.type === 2) {
+                const endX = x + note.duration * this.noteSpeed;
+                if (endX < -100 || x > this.canvas.width + 100) return;
+
+                // Draw Roll Bar
+                this.ctx.fillStyle = '#ffcc00'; // Yellow
+                this.ctx.beginPath();
+                this.ctx.roundRect(x, this.laneY - this.noteRadius, endX - x, this.noteRadius * 2, this.noteRadius);
+                this.ctx.fill();
+                this.ctx.strokeStyle = 'white';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+
+                // Roll text
+                this.ctx.fillStyle = '#333';
+                this.ctx.font = 'bold 18px Noto Sans JP';
+                this.ctx.fillText('連打', x + 30, this.laneY);
+                return;
+            }
+
             if (x < -100 || x > this.canvas.width + 100) return;
 
             this.ctx.beginPath();
