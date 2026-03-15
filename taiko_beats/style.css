@@ -120,6 +120,7 @@ h1 {
     letter-spacing: 4px;
     background: linear-gradient(90deg, var(--don-color), var(--kat-color));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
