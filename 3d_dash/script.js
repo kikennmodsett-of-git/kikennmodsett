@@ -127,47 +127,47 @@ class Game3D {
     }
 
     createLevel() {
-        // Section 1: Introduction (Balanced: Z-distance 8)
+        // Section 1: Introduction (Z-distance: 9)
         this.addPlatform(0, 0, 0, 8, 8);
         this.addRespawnGate(0, 0, 5, 0x00ffff);
         for (let i = 1; i <= 6; i++) this.addPlatform(Math.sin(i) * 3, i * 0.4, i * -9, 4, 4);
 
-        // Section 2: Moving Platforms (Horizontal: Reachable ranges)
-        this.addRespawnGate(0, 4, -70, 0x00ffff);
-        this.addPlatform(0, 4, -80, 10, 10, 0x00ffff);
-        this.addMovingPlatform(0, 4, -105, 5, 5, 0x00ffff, new THREE.Vector3(7, 0, 0), 0.04);
-        this.addMovingPlatform(0, 5, -130, 5, 5, 0x00ffff, new THREE.Vector3(-7, 0, 0), 0.05);
-        this.addPlatform(0, 6, -155, 6, 6);
+        // Section 2: Moving Platforms (Z-distance: 12)
+        this.addRespawnGate(0, 3, -60, 0x00ffff);
+        this.addPlatform(0, 3, -70, 10, 10, 0x00ffff);
+        this.addMovingPlatform(0, 3, -82, 5, 5, 0x00ffff, new THREE.Vector3(6, 0, 0), 0.04);
+        this.addMovingPlatform(0, 4, -94, 5, 5, 0x00ffff, new THREE.Vector3(-6, 0, 0), 0.05);
+        this.addPlatform(0, 5, -106, 6, 6);
 
-        // Section 3: Vertical Gimmicks (Reachable heights)
-        this.addRespawnGate(0, 6, -170, 0xff00ff);
-        this.addPlatform(0, 6, -185, 10, 10, 0xff00ff);
-        this.addMovingPlatform(0, 7, -210, 5, 5, 0xff00ff, new THREE.Vector3(0, 5, 0), 0.03);
-        this.addMovingPlatform(5, 9, -240, 5, 5, 0xff00ff, new THREE.Vector3(0, 6, 0), 0.04);
-        this.addPlatform(0, 12, -280, 8, 8);
+        // Section 3: Vertical Gimmicks (Z-distance: 12)
+        this.addRespawnGate(0, 5, -120, 0xff00ff);
+        this.addPlatform(0, 5, -132, 10, 10, 0xff00ff);
+        this.addMovingPlatform(0, 6, -144, 5, 5, 0xff00ff, new THREE.Vector3(0, 4, 0), 0.03);
+        this.addMovingPlatform(4, 8, -156, 5, 5, 0xff00ff, new THREE.Vector3(0, 5, 0), 0.04);
+        this.addPlatform(0, 10, -172, 8, 8);
 
-        // Section 4: The Void (Controlled Randomness)
-        this.addRespawnGate(0, 12, -300, 0xffff00);
-        this.addPlatform(0, 12, -315, 12, 12, 0xffff00);
+        // Section 4: The Void (Controlled Randomness: Z-distance: ~10)
+        this.addRespawnGate(0, 10, -190, 0xffff00);
+        this.addPlatform(0, 10, -205, 12, 12, 0xffff00);
         for (let i = 1; i <= 10; i++) {
-            const x = (Math.random() - 0.5) * 10; // Capped X-variance
-            this.addPlatform(x, 12 + i * 0.4, -315 + i * -11, 3.5, 3.5); // Capped Z-distance
+            const x = (Math.random() - 0.5) * 8;
+            this.addPlatform(x, 10 + i * 0.4, -205 + i * -10, 3.5, 3.5);
         }
 
-        // Section 5: Moving Maze (Safe gaps)
-        this.addRespawnGate(0, 18, -440, 0xffffff);
-        this.addPlatform(0, 18, -460, 15, 15, 0xffffff);
-        this.addMovingPlatform(5, 18, -490, 5, 5, 0x00ffff, new THREE.Vector3(-8, 4, -5), 0.02);
-        this.addMovingPlatform(-5, 22, -520, 5, 5, 0xff00ff, new THREE.Vector3(8, -4, -5), 0.03);
-        this.addMovingPlatform(0, 20, -550, 6, 6, 0x00ffff, new THREE.Vector3(0, 0, -10), 0.04);
+        // Section 5: Moving Maze (Z-distance: 12)
+        this.addRespawnGate(0, 15, -310, 0xffffff);
+        this.addPlatform(0, 15, -325, 15, 15, 0xffffff);
+        this.addMovingPlatform(5, 15, -337, 5, 5, 0x00ffff, new THREE.Vector3(-6, 3, -4), 0.02);
+        this.addMovingPlatform(-5, 18, -349, 5, 5, 0xff00ff, new THREE.Vector3(6, -3, -4), 0.03);
+        this.addMovingPlatform(0, 17, -361, 6, 6, 0x00ffff, new THREE.Vector3(0, 0, -8), 0.04);
 
         // Goal
-        this.goal = this.addPlatform(0, 22, -630, 20, 20, 0x00ff00);
+        this.goal = this.addPlatform(0, 20, -390, 20, 20, 0x00ff00);
         const marker = new THREE.Mesh(
             new THREE.TorusGeometry(8, 0.4, 16, 120),
             new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 3 })
         );
-        marker.position.set(0, 38, -630);
+        marker.position.set(0, 35, -390);
         this.scene.add(marker);
     }
 
@@ -299,7 +299,7 @@ class Game3D {
         });
 
         if (this.player.position.y < -35) { this.isMoving = false; document.getElementById('fall-overlay').classList.remove('hidden'); }
-        if (this.player.position.z < -620) {
+        if (this.player.position.z < -380) {
             this.isGameOver = true; this.isMoving = false;
             document.getElementById('final-time').innerText = this.elapsedTime.toFixed(2);
             document.getElementById('finish-overlay').classList.remove('hidden');
