@@ -105,6 +105,15 @@ export class Battle {
 
                 this.monster.hp -= damage;
                 this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
+
+                // HP吸収効果の適用
+                const lifeSteal = this.player.getSpecialEffectValue("lifeSteal");
+                if (lifeSteal > 0) {
+                    const heal = Math.max(1, Math.floor(damage * (lifeSteal / 100)));
+                    this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+                    this.ui.log(`[特殊効果] ダメージの一部を吸収！体力を ${heal} 回復した。`);
+                    this.ui.updateHeader(this.player);
+                }
             }
         }
 
@@ -135,6 +144,17 @@ export class Battle {
             let damage = Math.max(1, (attacker === this.player ? totalStats.attack : attacker.atk) * 2 - (target === this.player ? totalStats.defense : target.def));
             target.hp -= damage;
             this.ui.log(`${attacker.name} の攻撃！ ${target.name} に ${damage} のダメージ！`);
+
+            // HP吸収効果の適用 (プレイヤーが攻撃した場合のみ)
+            if (isPlayer) {
+                const lifeSteal = this.player.getSpecialEffectValue("lifeSteal");
+                if (lifeSteal > 0) {
+                    const heal = Math.max(1, Math.floor(damage * (lifeSteal / 100)));
+                    this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
+                    this.ui.log(`[特殊効果] ダメージの一部を吸収！体力を ${heal} 回復した。`);
+                    this.ui.updateHeader(this.player);
+                }
+            }
         }
 
         if (target.hp <= 0) {
@@ -232,7 +252,15 @@ export class Battle {
 
     win() {
         this.ui.log(`${this.monster.name} を倒した！`);
-        this.ui.log(`${this.monster.exp} の経験値と ${this.monster.gold} G を手に入れた。`);
+
+        // 特殊効果によるボーナス計算
+        const expBoost = this.player.getSpecialEffectValue("expBoost");
+        const goldBoost = this.player.getSpecialEffectValue("goldBoost");
+
+        const finalExp = Math.floor(this.monster.exp * (1 + expBoost / 100));
+        const finalGold = Math.floor(this.monster.gold * (1 + goldBoost / 100));
+
+        this.ui.log(`${finalExp} の経験値と ${finalGold} G を手に入れた。${expBoost > 0 ? `(ボーナス+${expBoost}%)` : ""}`);
 
         // クエスト進行チェック
         window.game.allQuests.forEach(q => {
@@ -248,8 +276,8 @@ export class Battle {
             }
         });
 
-        this.player.gold += this.monster.gold;
-        if (this.player.gainExp(this.monster.exp)) {
+        this.player.gold += finalGold;
+        if (this.player.gainExp(finalExp)) {
             this.ui.log("レベルアップ！ ステータスポイントを5獲得しました。");
         }
 
@@ -285,6 +313,45 @@ export class Battle {
             const rareItemName = `${rarePrefixes[pIdx]}${this.monster.element}の${rareBases[bIdx]}`;
 
             this.gainMaterial(rareItemName, materialLevel, true);
+        }
+
+        // --- アクセサリドロップ判定 (NEW) ---
+        const rollAcc = Math.random();
+        const dropRateAcc = 0.03 + luckBonus; // 基礎3% + 幸運
+
+        if (rollAcc < dropRateAcc) {
+            const accNames = ["お守り", "リング", "ネックレス", "ピアス", "ブレスレット", "アンクレット"];
+            const accPrefixes = ["光る", "重厚な", "神秘的な", "古びた", "魔力漂う"];
+            const name = `${accPrefixes[Math.floor(Math.random() * accPrefixes.length)]}${accNames[Math.floor(Math.random() * accNames.length)]}`;
+
+            const accessory = {
+                type: 'accessory',
+                name: name,
+                element: this.monster.element,
+                level: materialLevel,
+                stats: {
+                    defense: Math.floor(this.monster.level / 10) + 1,
+                    luck: Math.floor(Math.random() * 3) + 1
+                },
+                effects: null
+            };
+
+            // 1%の確率で特殊効果を付与
+            if (Math.random() < 0.01) {
+                const effects = [
+                    { key: "expBoost", value: 10, label: "経験値+10%" },
+                    { key: "lifeSteal", value: 5, label: "HP吸収+5%" },
+                    { key: "goldBoost", value: 15, label: "獲得G+15%" }
+                ];
+                const effect = effects[Math.floor(Math.random() * effects.length)];
+                accessory.effects = { [effect.key]: effect.value };
+                accessory.name = `[極]${accessory.name}`;
+                this.ui.log(`<span style="color: #ff00ff; font-weight: bold;">超レア！特殊効果付きアクセサリ「${accessory.name}」を入手！ (${effect.label})</span>`);
+            } else {
+                this.ui.log(`<span style="color: #00ff00;">アクセサリ「${accessory.name}」を入手した！</span>`);
+            }
+
+            this.player.inventory.push(accessory);
         }
 
         this.ui.updateHeader(this.player);

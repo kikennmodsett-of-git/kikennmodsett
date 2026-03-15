@@ -173,7 +173,9 @@ class Game {
             { type: 'armor', slot: 'chest', name: "鉄の胸当て", stats: { defense: 12 }, price: 2000 },
             { type: 'armor', slot: 'legs', name: "鉄の具足", stats: { defense: 8 }, price: 1500 },
             { type: 'armor', slot: 'feet', name: "鉄のブーツ", stats: { defense: 4, agility: 2 }, price: 1000 },
-            { type: 'armor', slot: 'waist', name: "鉄の腰帯", stats: { defense: 3, luck: 2 }, price: 800 }
+            { type: 'armor', slot: 'waist', name: "鉄の腰帯", stats: { defense: 3, luck: 2 }, price: 800 },
+            { type: 'accessory', name: "旅人の指輪", stats: { defense: 1, luck: 5 }, price: 5000 },
+            { type: 'accessory', name: "守りのアミュレット", stats: { defense: 8 }, price: 8000 }
         ];
 
         let html = `<h3>総合ショップ</h3><p>厳選された装備品です。</p><div class="shop-grid">`;
@@ -267,6 +269,7 @@ class Game {
         html += `<div id="forge-selection">
             <button onclick="window.game.selectForgeCategory('weapon')">武器を作る</button>
             <button onclick="window.game.selectForgeCategory('armor')">防具を作る</button>
+            <button onclick="window.game.selectForgeCategory('accessory')">アクセサリを作る</button>
         </div>
         <div id="forge-dynamic-area" style="margin-top: 15px;"></div>
         <button onclick="game.ui.hideModal()" style="margin-top:10px;">店を出る</button>`;
@@ -278,6 +281,8 @@ class Game {
         this.forgeData.category = cat;
         if (cat === 'armor') {
             this.forgeData.slot = 'chest'; // デフォルト
+        } else if (cat === 'accessory') {
+            this.forgeData.slot = 'accessory';
         } else {
             this.forgeData.slot = 'weapon';
         }
@@ -312,7 +317,7 @@ class Game {
             html += `</div>`;
         }
 
-        const slotNames = { head: '頭', chest: '胴', legs: '脚', feet: '足', waist: '腰', weapon: '武器' };
+        const slotNames = { head: '頭', chest: '胴', legs: '脚', feet: '足', waist: '腰', weapon: '武器', accessory: 'アクセサリ' };
         html += `<h4>${slotNames[this.forgeData.slot] || '装備'}の素材選択</h4>`;
         const mats = Object.entries(this.player.materials).filter(([_, m]) => m.count > 0);
 
@@ -368,8 +373,9 @@ class Game {
         }
 
         const isWeapon = this.forgeData.category === 'weapon';
+        const isAccessory = this.forgeData.category === 'accessory';
         const slot = this.forgeData.slot;
-        const slotNames = { head: '頭部', chest: '特製', legs: '脚部', feet: '足部', waist: '腰帯', weapon: '鍛造' };
+        const slotNames = { head: '頭部', chest: '特製', legs: '脚部', feet: '足部', waist: '腰帯', weapon: '鍛造', accessory: '魔導' };
 
         let element = elements.size > 0 ? Array.from(elements)[0] : "無";
 
@@ -380,21 +386,43 @@ class Game {
             totalPower *= 1.2; // ボーナス
         }
 
-        const baseName = nameParts.length > 0 ? nameParts[0] : (isWeapon ? "なまくら" : "お古");
-        const finalName = `${baseName}の${slotNames[slot] || '防具'}${isWeapon ? '剣' : '鎧'}`;
+        const baseName = nameParts.length > 0 ? nameParts[0] : (isWeapon ? "なまくら" : (isAccessory ? "不思議な" : "お古"));
+        const finalName = `${baseName}の${slotNames[slot] || '防具'}${isWeapon ? '剣' : (isAccessory ? 'アクセサリ' : '鎧')}`;
 
-        const newItem = isWeapon ? {
-            type: 'weapon',
-            name: finalName,
-            atk: Math.floor(totalPower * 2.5),
-            element: element
-        } : {
-            type: 'armor',
-            slot: slot,
-            name: finalName,
-            stats: { defense: Math.floor(totalPower * 1.5) },
-            element: element
-        };
+        let newItem;
+        if (isWeapon) {
+            newItem = {
+                type: 'weapon',
+                name: finalName,
+                atk: Math.floor(totalPower * 2.5),
+                element: element
+            };
+        } else if (isAccessory) {
+            newItem = {
+                type: 'accessory',
+                name: finalName,
+                element: element,
+                level: Math.floor(totalPower / 5) + 1,
+                stats: {
+                    defense: Math.floor(totalPower / 2),
+                    luck: Math.floor(totalPower / 4)
+                },
+                effects: null
+            };
+            // 製作でも稀に特殊効果 (5%)
+            if (Math.random() < 0.05) {
+                newItem.name = `[極]${newItem.name}`;
+                newItem.effects = { expBoost: 10 }; // 製作は経験値固定に
+            }
+        } else {
+            newItem = {
+                type: 'armor',
+                slot: slot,
+                name: finalName,
+                stats: { defense: Math.floor(totalPower * 1.5) },
+                element: element
+            };
+        }
 
         this.player.inventory.push(newItem);
         this.ui.log(`${finalName} (${element}属性) を作り上げた！`);

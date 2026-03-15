@@ -48,7 +48,16 @@ export class Inventory {
         slotMap.forEach(slot => {
             const item = p.equipment[slot.id];
             const statText = item ? (slot.id === 'weapon' ? `(攻撃+${item.atk})` : `(防御+${item.stats ? item.stats.defense : 0})`) : "";
-            html += `<li>${slot.name}: ${item ? item.name : "なし"} ${statText}</li>`;
+            const elementClass = item && item.element ? `skill-element-${item.element}` : "";
+            html += `<li class="${elementClass}" style="margin-bottom: 2px; padding: 2px 5px; border-radius: 4px;">${slot.name}: ${item ? item.name : "なし"} ${statText}</li>`;
+        });
+
+        // アクセサリの表示
+        p.equipment.accessories.forEach((item, idx) => {
+            const statText = item && item.stats ? "(" + Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', ') + ")" : "";
+            const elementClass = item && item.element ? `skill-element-${item.element}` : "";
+            const effectText = item && item.effects ? " [特]" : "";
+            html += `<li class="${elementClass}" style="margin-bottom: 2px; padding: 2px 5px; border-radius: 4px;">アクセサリ${idx + 1}: ${item ? item.name : "なし"} ${statText}${effectText}</li>`;
         });
 
         html += `
@@ -127,9 +136,21 @@ export class Inventory {
         slots.forEach(slot => {
             const item = p.equipment[slot.id];
             const itemName = item ? item.name : "（未装備）";
+            const elementClass = item && item.element ? `skill-element-${item.element}` : "";
             html += `
-                <div class="equip-slot-item" onclick="game.inventory.showEquipCategory('${slot.id}')">
+                <div class="equip-slot-item ${elementClass}" onclick="game.inventory.showEquipCategory('${slot.id}')">
                     <strong>${slot.name}:</strong> <span>${itemName}</span>
+                </div>
+            `;
+        });
+
+        // アクセサリスロットの表示
+        p.equipment.accessories.forEach((item, idx) => {
+            const itemName = item ? item.name : "（未装備）";
+            const elementClass = item && item.element ? `skill-element-${item.element}` : "";
+            html += `
+                <div class="equip-slot-item ${elementClass}" onclick="game.inventory.showEquipCategory('accessory', ${idx})">
+                    <strong>アクセサリ${idx + 1}:</strong> <span>${itemName}</span>
                 </div>
             `;
         });
@@ -137,38 +158,52 @@ export class Inventory {
         document.getElementById('inv-content').innerHTML = html;
     }
 
-    showEquipCategory(slotId) {
+    showEquipCategory(slotId, accessoryIdx = -1) {
         const p = this.player;
-        // インベントリからそのスロットに合うアイテムを抽出
         const isWeapon = slotId === 'weapon';
-        const items = p.inventory.filter(item => isWeapon ? item.type === 'weapon' : (item.type === 'armor' && item.slot === slotId));
+        const isAccessory = slotId === 'accessory';
 
-        let html = `<h3>${slotId.toUpperCase()} の装備品</h3><ul>`;
+        const items = p.inventory.filter(item => {
+            if (isWeapon) return item.type === 'weapon';
+            if (isAccessory) return item.type === 'accessory';
+            return item.type === 'armor' && item.slot === slotId;
+        });
+
+        const title = isAccessory ? `アクセサリ${accessoryIdx + 1}` : slotId.toUpperCase();
+        let html = `<h3>${title} の候補</h3><ul>`;
+
         if (items.length === 0) {
             html += "<p>変更できる装備を持っていません。</p>";
         } else {
             items.forEach((item, idx) => {
                 const statText = isWeapon ? `攻撃+${item.atk}` : Object.entries(item.stats || {}).map(([k, v]) => `${k}+${v}`).join(', ');
                 const elementClass = item.element ? `skill-element-${item.element}` : "";
+                const effectText = item.effects ? " [特殊効果あり]" : "";
                 html += `<li class="${elementClass}" style="margin-bottom: 5px; padding: 5px; border-radius: 4px;">
-                    <button onclick="game.inventory.changeEquip('${slotId}', ${idx})">装備する</button> 
-                    ${item.name} (${statText} / ${item.element || '無'}属性)
+                    <button onclick="game.inventory.changeEquip('${slotId}', ${idx}, ${accessoryIdx})">装備する</button> 
+                    ${item.name} (${statText} / ${item.element || '無'}属性)${effectText}
                 </li>`;
             });
         }
         // 外すボタン
-        html += `<li style="margin-top:10px;"><button onclick="game.inventory.changeEquip('${slotId}', -1)">装備を外す</button></li>`;
+        html += `<li style="margin-top:10px;"><button onclick="game.inventory.changeEquip('${slotId}', -1, ${accessoryIdx})">装備を外す</button></li>`;
         html += `</ul><button onclick="game.inventory.showEquipScreen()">戻る</button>`;
         document.getElementById('inv-content').innerHTML = html;
     }
 
-    changeEquip(slotId, itemIdx) {
+    changeEquip(slotId, itemIdx, accessoryIdx = -1) {
         const p = this.player;
-        const current = p.equipment[slotId];
         const isWeapon = slotId === 'weapon';
+        const isAccessory = slotId === 'accessory';
+
+        const current = isAccessory ? p.equipment.accessories[accessoryIdx] : p.equipment[slotId];
 
         // インベントリから該当するアイテム候補を取得
-        const items = p.inventory.filter(item => isWeapon ? item.type === 'weapon' : (item.type === 'armor' && item.slot === slotId));
+        const items = p.inventory.filter(item => {
+            if (isWeapon) return item.type === 'weapon';
+            if (isAccessory) return item.type === 'accessory';
+            return item.type === 'armor' && item.slot === slotId;
+        });
 
         // 今の装備をインベントリに戻す (nullでなければ)
         if (current) {
@@ -176,12 +211,15 @@ export class Inventory {
         }
 
         if (itemIdx === -1) {
-            p.equipment[slotId] = null;
-            this.ui.log(`${slotId} の装備を外しました。`);
+            if (isAccessory) p.equipment.accessories[accessoryIdx] = null;
+            else p.equipment[slotId] = null;
+            this.ui.log(`${isAccessory ? 'アクセサリ' + (accessoryIdx + 1) : slotId} の装備を外しました。`);
         } else {
             // インベントリから選んだアイテムを装備
             const newItem = items[itemIdx];
-            p.equipment[slotId] = newItem;
+            if (isAccessory) p.equipment.accessories[accessoryIdx] = newItem;
+            else p.equipment[slotId] = newItem;
+
             // インベントリから削除
             p.inventory = p.inventory.filter(it => it !== newItem);
             this.ui.log(`${newItem.name} を装備しました。`);

@@ -33,7 +33,8 @@ export class Player {
             chest: null,
             legs: null,
             feet: null,
-            waist: null
+            waist: null,
+            accessories: [null, null, null, null, null] // 5つのアクセサリスロット
         };
 
         this.inventory = [];
@@ -125,8 +126,8 @@ export class Player {
         }
 
         // 防具の各部位を合算
-        const slots = ['head', 'chest', 'legs', 'feet', 'waist'];
-        slots.forEach(slot => {
+        const armorSlots = ['head', 'chest', 'legs', 'feet', 'waist'];
+        armorSlots.forEach(slot => {
             const item = this.equipment[slot];
             if (item && item.stats) {
                 for (const stat in item.stats) {
@@ -137,6 +138,34 @@ export class Player {
             }
         });
 
+        // アクセサリ（最大5つ）の補正を合算
+        this.equipment.accessories.forEach(item => {
+            if (item && item.stats) {
+                for (const stat in item.stats) {
+                    if (total.hasOwnProperty(stat)) {
+                        total[stat] += item.stats[stat];
+                    }
+                }
+            }
+        });
+
         return total;
+    }
+
+    // 特定の特殊効果（経験値アップなど）の合計値を取得
+    getSpecialEffectValue(effectKey) {
+        let value = 0;
+        // 防具とアクセサリから効果を収集
+        const allItems = [
+            this.equipment.head, this.equipment.chest, this.equipment.legs,
+            this.equipment.feet, this.equipment.waist, ...this.equipment.accessories
+        ];
+
+        allItems.forEach(item => {
+            if (item && item.effects && item.effects[effectKey]) {
+                value += item.effects[effectKey];
+            }
+        });
+        return value;
     }
 }
