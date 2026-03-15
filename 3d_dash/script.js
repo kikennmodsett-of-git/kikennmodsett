@@ -127,48 +127,47 @@ class Game3D {
     }
 
     createLevel() {
-        // Section 1: Introduction
+        // Section 1: Introduction (Balanced: Z-distance 8)
         this.addPlatform(0, 0, 0, 8, 8);
         this.addRespawnGate(0, 0, 5, 0x00ffff);
-        for (let i = 1; i <= 6; i++) this.addPlatform(Math.sin(i) * 4, i * 0.5, i * -12, 4, 4);
+        for (let i = 1; i <= 6; i++) this.addPlatform(Math.sin(i) * 3, i * 0.4, i * -9, 4, 4);
 
-        // Section 2: Moving Platforms (Horizontal)
-        this.addRespawnGate(0, 4, -90, 0x00ffff);
-        this.addPlatform(0, 4, -100, 10, 10, 0x00ffff);
-        this.addMovingPlatform(0, 4, -130, 5, 5, 0x00ffff, new THREE.Vector3(10, 0, 0), 0.04);
-        this.addMovingPlatform(0, 5, -160, 5, 5, 0x00ffff, new THREE.Vector3(-10, 0, 0), 0.05);
-        this.addPlatform(0, 6, -190, 6, 6);
+        // Section 2: Moving Platforms (Horizontal: Reachable ranges)
+        this.addRespawnGate(0, 4, -70, 0x00ffff);
+        this.addPlatform(0, 4, -80, 10, 10, 0x00ffff);
+        this.addMovingPlatform(0, 4, -105, 5, 5, 0x00ffff, new THREE.Vector3(7, 0, 0), 0.04);
+        this.addMovingPlatform(0, 5, -130, 5, 5, 0x00ffff, new THREE.Vector3(-7, 0, 0), 0.05);
+        this.addPlatform(0, 6, -155, 6, 6);
 
-        // Section 3: Vertical Gimmicks
-        this.addRespawnGate(0, 6, -210, 0xff00ff);
-        this.addPlatform(0, 6, -225, 10, 10, 0xff00ff);
-        this.addMovingPlatform(0, 8, -250, 4, 4, 0xff00ff, new THREE.Vector3(0, 6, 0), 0.03);
-        this.addMovingPlatform(5, 10, -280, 4, 4, 0xff00ff, new THREE.Vector3(0, 8, 0), 0.04);
-        this.addPlatform(0, 14, -320, 8, 8);
+        // Section 3: Vertical Gimmicks (Reachable heights)
+        this.addRespawnGate(0, 6, -170, 0xff00ff);
+        this.addPlatform(0, 6, -185, 10, 10, 0xff00ff);
+        this.addMovingPlatform(0, 7, -210, 5, 5, 0xff00ff, new THREE.Vector3(0, 5, 0), 0.03);
+        this.addMovingPlatform(5, 9, -240, 5, 5, 0xff00ff, new THREE.Vector3(0, 6, 0), 0.04);
+        this.addPlatform(0, 12, -280, 8, 8);
 
-        // Section 4: The Void (Small/Fast Platforms)
-        this.addRespawnGate(0, 14, -340, 0xffff00);
-        this.addPlatform(0, 14, -355, 12, 12, 0xffff00);
+        // Section 4: The Void (Controlled Randomness)
+        this.addRespawnGate(0, 12, -300, 0xffff00);
+        this.addPlatform(0, 12, -315, 12, 12, 0xffff00);
         for (let i = 1; i <= 10; i++) {
-            const x = (Math.random() - 0.5) * 20;
-            this.addPlatform(x, 14 + i * 0.5, -355 + i * -15, 3, 3);
+            const x = (Math.random() - 0.5) * 10; // Capped X-variance
+            this.addPlatform(x, 12 + i * 0.4, -315 + i * -11, 3.5, 3.5); // Capped Z-distance
         }
 
-        // Section 5: Moving Maze
-        this.addRespawnGate(0, 20, -520, 0xffffff);
-        this.addPlatform(0, 20, -540, 15, 15, 0xffffff);
-        this.addMovingPlatform(5, 20, -580, 4, 4, 0x00ffff, new THREE.Vector3(-10, 5, -10), 0.02);
-        this.addMovingPlatform(-5, 25, -620, 4, 4, 0xff00ff, new THREE.Vector3(10, -5, -10), 0.03);
-        this.addMovingPlatform(0, 22, -660, 6, 6, 0x00ffff, new THREE.Vector3(0, 0, -20), 0.04);
+        // Section 5: Moving Maze (Safe gaps)
+        this.addRespawnGate(0, 18, -440, 0xffffff);
+        this.addPlatform(0, 18, -460, 15, 15, 0xffffff);
+        this.addMovingPlatform(5, 18, -490, 5, 5, 0x00ffff, new THREE.Vector3(-8, 4, -5), 0.02);
+        this.addMovingPlatform(-5, 22, -520, 5, 5, 0xff00ff, new THREE.Vector3(8, -4, -5), 0.03);
+        this.addMovingPlatform(0, 20, -550, 6, 6, 0x00ffff, new THREE.Vector3(0, 0, -10), 0.04);
 
         // Goal
-        this.goal = this.addPlatform(0, 25, -750, 20, 20, 0x00ff00);
+        this.goal = this.addPlatform(0, 22, -630, 20, 20, 0x00ff00);
         const marker = new THREE.Mesh(
             new THREE.TorusGeometry(8, 0.4, 16, 120),
             new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 3 })
         );
         marker.position.set(0, 38, -750);
-        this.scene.add(marker);
     }
 
     addPlatform(x, y, z, w, d, color = 0x222244) {
