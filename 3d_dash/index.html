@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Dash - Neon Void Runner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <!-- Canvas will be injected here by Three.js -->
+
+        <div id="ui-overlay">
+            <div id="timer">TIME: 0.00</div>
+            <div id="instruction">WASD: 移動 | SPACE: ジャンプ</div>
+        </div>
+
+        <div id="start-overlay" class="overlay">
+            <div class="overlay-content">
+                <h1>3D DASH</h1>
+                <p>ネオン輝く虚無空間を駆け抜けろ</p>
+                <button id="start-btn">START GAME</button>
+            </div>
+        </div>
+
+        <div id="finish-overlay" class="overlay hidden">
+            <div class="overlay-content">
+                <h1>GOAL!!</h1>
+                <p>クリアタイム: <span id="final-time">0.00</span> 秒</p>
+                <button id="retry-btn">RETRY</button>
+            </div>
+        </div>
+
+        <div id="fall-overlay" class="overlay hidden">
+            <div class="overlay-content">
+                <h1>FALLEN...</h1>
+                <p>虚無へ落ちてしまった</p>
+                <button id="restart-btn">RESTART</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
