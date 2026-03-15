@@ -227,14 +227,19 @@ class Game3D {
         this.player.rotation.y = this.playerRotation;
 
         // Relative Movement
+        // Relative Movement
         const moveVec = new THREE.Vector3();
+        const isMovingInput = this.keys['KeyW'] || this.keys['KeyS'] || this.keys['KeyA'] || this.keys['KeyD'];
+        const isDashing = isMovingInput && (this.keys['ShiftLeft'] || this.keys['ShiftRight']);
+        const currentSpeed = isDashing ? this.moveSpeed * 1.6 : this.moveSpeed;
+
         if (this.keys['KeyW']) moveVec.z -= 1;
         if (this.keys['KeyS']) moveVec.z += 1;
         if (this.keys['KeyA']) moveVec.x -= 1;
         if (this.keys['KeyD']) moveVec.x += 1;
 
         if (moveVec.length() > 0) {
-            moveVec.normalize().multiplyScalar(this.moveSpeed);
+            moveVec.normalize().multiplyScalar(currentSpeed);
             // Rotate move vector by player's rotation
             moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerRotation);
             this.player.position.x += moveVec.x;
