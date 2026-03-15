@@ -167,7 +167,8 @@ class Game3D {
             new THREE.TorusGeometry(8, 0.4, 16, 120),
             new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 3 })
         );
-        marker.position.set(0, 38, -750);
+        marker.position.set(0, 38, -630);
+        this.scene.add(marker);
     }
 
     addPlatform(x, y, z, w, d, color = 0x222244) {
@@ -298,7 +299,7 @@ class Game3D {
         });
 
         if (this.player.position.y < -35) { this.isMoving = false; document.getElementById('fall-overlay').classList.remove('hidden'); }
-        if (this.player.position.z < -735) {
+        if (this.player.position.z < -620) {
             this.isGameOver = true; this.isMoving = false;
             document.getElementById('final-time').innerText = this.elapsedTime.toFixed(2);
             document.getElementById('finish-overlay').classList.remove('hidden');
