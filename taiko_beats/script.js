@@ -69,15 +69,6 @@ class TaikoGame {
     }
 
     async generateChart() {
-        // Simple onset detection using OfflineAudioContext
-        const offlineCtx = new OfflineAudioContext(1, this.audioBuffer.length, this.audioBuffer.sampleRate);
-        const source = offlineCtx.createBufferSource();
-        source.buffer = this.audioBuffer;
-
-        const analyser = offlineCtx.createScriptProcessor(4096, 1, 1);
-        source.connect(analyser);
-        analyser.connect(offlineCtx.destination);
-
         const pcmData = this.audioBuffer.getChannelData(0);
         const sampleRate = this.audioBuffer.sampleRate;
         const detections = [];
@@ -86,7 +77,8 @@ class TaikoGame {
         const frameSize = 1024;
         const overlap = 512;
         let lastPeakTime = -1;
-        const minGap = 0.25; // 250ms minimum gap between notes
+        const minGap = 0.20; // 200ms minimum gap
+        let threshold = 0.05; // Lowered threshold
 
         for (let i = 0; i < pcmData.length - frameSize; i += overlap) {
             let energy = 0;
@@ -95,12 +87,12 @@ class TaikoGame {
             }
             energy /= frameSize;
 
-            if (energy > 0.1) { // Threshold
+            if (energy > threshold) {
                 const time = i / sampleRate;
                 if (time - lastPeakTime > minGap) {
                     detections.push({
                         time: time,
-                        type: Math.random() > 0.7 ? 1 : 0 // 70% Don, 30% Kat
+                        type: Math.random() > 0.7 ? 1 : 0
                     });
                     lastPeakTime = time;
                 }
@@ -108,6 +100,7 @@ class TaikoGame {
         }
 
         this.chart = detections;
+        document.getElementById('status').innerText = `解析完了: ${this.chart.length} 個のノーツを生成しました`;
         console.log(`Generated ${this.chart.length} notes.`);
     }
 
