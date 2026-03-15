@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taiko Beats - Music Game</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="ui-layer">
+            <div id="header">
+                <div id="score">SCORE: 0</div>
+                <div id="combo">0 COMBO</div>
+            </div>
+
+            <div id="judgment">READY?</div>
+
+            <div id="controls-hint">
+                <span>ドン (Wキー)</span>
+                <span>カッ (Sキー)</span>
+            </div>
+        </div>
+
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Overlay for Initial Setup -->
+        <div id="setup-overlay" class="overlay">
+            <div class="content">
+                <h1>TAIKO BEATS</h1>
+                <p>音楽ファイルを読み込んで、リズムに乗って太鼓を叩こう！</p>
+                <div class="upload-area">
+                    <label for="audio-upload" class="upload-btn">音楽ファイルを選択</label>
+                    <input type="file" id="audio-upload" accept="audio/*">
+                    <div id="file-name">ファイルが選択されていません</div>
+                </div>
+                <div id="status">ファイルをアップロードしてください</div>
+                <button id="start-btn" disabled>START GAME</button>
+                <p class="hint">推奨: ノリの良い曲 (MP3/WAV)</p>
+            </div>
+        </div>
+
+        <!-- Result Overlay -->
+        <div id="result-overlay" class="overlay hidden">
+            <div class="content">
+                <h1 id="result-title">FAILED</h1>
+                <div class="stats">
+                    <div class="stat-item">GOOD: <span id="stat-good">0</span></div>
+                    <div class="stat-item">NICE: <span id="stat-nice">0</span></div>
+                    <div class="stat-item">BAD: <span id="stat-bad">0</span></div>
+                    <div class="stat-item total">SCORE: <span id="stat-total">0</span></div>
+                </div>
+                <button id="retry-btn">RETRY</button>
+                <p id="clear-status"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
