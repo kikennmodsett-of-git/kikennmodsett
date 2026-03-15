@@ -10,8 +10,18 @@ class Game3D {
         this.player = null;
         this.platforms = [];
         this.movingPlatforms = [];
-        this.particles = null;
+        // Advanced Systems (Sections & Respawn)
         this.checkpoint = new THREE.Vector3(0, 2, 0);
+        this.currentSection = 0;
+        this.sectionSplits = [];
+        this.sectionThresholds = [-60, -120, -190, -310]; // Match gate positions
+        this.sectionCheckpoints = [
+            new THREE.Vector3(0, 2, 0),    // Section 1
+            new THREE.Vector3(0, 4, -70),  // Section 2
+            new THREE.Vector3(0, 6, -132), // Section 3
+            new THREE.Vector3(0, 11, -205),// Section 4
+            new THREE.Vector3(0, 16, -325) // Section 5
+        ];
         this.checkpointRotation = 0;
 
         this.keys = {};
@@ -248,8 +258,10 @@ class Game3D {
         if (this.currentSection < this.sectionThresholds.length && this.player.position.z < this.sectionThresholds[this.currentSection]) {
             this.sectionSplits.push(this.elapsedTime);
             this.currentSection++;
-            this.checkpoint.set(this.player.position.x, this.player.position.y + 1, this.player.position.z);
+            // Update Checkpoint to fixed section start
+            this.checkpoint.copy(this.sectionCheckpoints[this.currentSection]);
             this.checkpointRotation = this.playerRotation;
+
             document.getElementById('splits').innerHTML = `SECTION ${this.currentSection + 1}<br>` +
                 this.sectionSplits.map((t, i) => `<span style="font-size:0.8em; opacity:0.6">S${i + 1}: ${t.toFixed(2)}s</span>`).join(' | ');
         }
