@@ -172,10 +172,10 @@ class Game {
             { type: 'armor', slot: 'head', name: "鉄の兜", stats: { defense: 5 }, price: 800 },
             { type: 'armor', slot: 'chest', name: "鉄の胸当て", stats: { defense: 12 }, price: 2000 },
             { type: 'armor', slot: 'legs', name: "鉄の具足", stats: { defense: 8 }, price: 1500 },
-            { type: 'armor', slot: 'feet', name: "鉄のブーツ", stats: { defense: 4, agility: 2 }, price: 1000 },
-            { type: 'armor', slot: 'waist', name: "鉄の腰帯", stats: { defense: 3, luck: 2 }, price: 800 },
-            { type: 'accessory', name: "旅人の指輪", stats: { defense: 1, luck: 5 }, price: 5000 },
-            { type: 'accessory', name: "守りのアミュレット", stats: { defense: 8 }, price: 8000 }
+            { type: 'armor', slot: 'feet', name: "鉄のブーツ", stats: { defense: 4, agility: 2 }, price: 1000, rarity: 1 },
+            { type: 'armor', slot: 'waist', name: "鉄の腰帯", stats: { defense: 3, luck: 2 }, price: 800, rarity: 1 },
+            { type: 'accessory', name: "旅人の指輪", stats: { defense: 1, luck: 5 }, price: 5000, rarity: 1 },
+            { type: 'accessory', name: "守りのアミュレット", stats: { defense: 8 }, price: 8000, rarity: 1 }
         ];
 
         let html = `<h3>総合ショップ</h3><p>厳選された装備品です。</p><div class="shop-grid">`;
@@ -270,6 +270,7 @@ class Game {
             <button onclick="window.game.selectForgeCategory('weapon')">武器を作る</button>
             <button onclick="window.game.selectForgeCategory('armor')">防具を作る</button>
             <button onclick="window.game.selectForgeCategory('accessory')">アクセサリを作る</button>
+            <button onclick="window.game.openSynthesis()" style="background: #9b59b6; border-color: #fff; color: #fff;">装備を合成する</button>
         </div>
         <div id="forge-dynamic-area" style="margin-top: 15px;"></div>
         <button onclick="game.ui.hideModal()" style="margin-top:10px;">店を出る</button>`;
@@ -395,7 +396,8 @@ class Game {
                 type: 'weapon',
                 name: finalName,
                 atk: Math.floor(totalPower * 2.5),
-                element: element
+                element: element,
+                rarity: 1
             };
         } else if (isAccessory) {
             newItem = {
@@ -407,7 +409,8 @@ class Game {
                     defense: Math.floor(totalPower / 2),
                     luck: Math.floor(totalPower / 4)
                 },
-                effects: null
+                effects: null,
+                rarity: 1
             };
             // 製作でも稀に特殊効果 (5%)
             if (Math.random() < 0.05) {
@@ -420,12 +423,138 @@ class Game {
                 slot: slot,
                 name: finalName,
                 stats: { defense: Math.floor(totalPower * 1.5) },
-                element: element
+                element: element,
+                rarity: 1
             };
         }
 
         this.player.inventory.push(newItem);
         this.ui.log(`${finalName} (${element}属性) を作り上げた！`);
+        this.ui.updateHeader(this.player);
+        this.ui.hideModal();
+    }
+
+    openSynthesis() {
+        this.synthBuffer = [];
+        this.updateSynthesisUI();
+    }
+
+    updateSynthesisUI() {
+        let html = `<h3>装備合成</h3><p>同じ種類の装備を2つ選んで合成します。<br>※ステータスが強化され、稀にレアリティ(☆)が上がります。</p>`;
+
+        if (this.synthBuffer.length < 2) {
+            html += `<p>選択中: ${this.synthBuffer.length}/2</p>`;
+            if (this.synthBuffer.length === 1) {
+                html += `<div style="background:rgba(255,255,255,0.1); padding:5px; margin-bottom:10px;">
+                    1つ目: ${this.synthBuffer[0].name} (☆${this.synthBuffer[0].rarity || 1})
+                </div>`;
+            }
+
+            // 合成可能な候補を表示
+            const p = this.player;
+            let candidates = p.inventory.filter(item => item.type === 'weapon' || item.type === 'armor' || item.type === 'accessory');
+
+            // 1つ目が選択されている場合、同じ部位・タイプのものを抽出
+            if (this.synthBuffer.length === 1) {
+                const first = this.synthBuffer[0];
+                candidates = candidates.filter(item => {
+                    if (item === first) return false;
+                    if (first.type !== item.type) return false;
+                    if (first.type === 'armor' && first.slot !== item.slot) return false;
+                    return true;
+                });
+            }
+
+            html += `<div style="max-height: 250px; overflow-y:auto; border:1px solid #444; padding:5px;">`;
+            if (candidates.length === 0) {
+                html += "<p>合成可能な装備がありません。</p>";
+            } else {
+                candidates.forEach((item, idx) => {
+                    const stars = "☆".repeat(item.rarity || 1);
+                    html += `<div style="margin-bottom:5px; border-bottom:1px solid #333; padding:5px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>${item.name} <span style="color:#ffcc00">${stars}</span></span>
+                        <button onclick="game.selectSynthItem(${p.inventory.indexOf(item)})">選択</button>
+                    </div>`;
+                });
+            }
+            html += `</div>`;
+        } else {
+            // 確認画面
+            const s1 = this.synthBuffer[0];
+            const s2 = this.synthBuffer[1];
+            html += `
+                <div style="text-align:center; padding:10px; background:rgba(155, 89, 182, 0.2); border:1px solid #9b59b6;">
+                    <p>${s1.name}(☆${s1.rarity || 1})  +  ${s2.name}(☆${s2.rarity || 1})</p>
+                    <p>↓↓↓</p>
+                    <button onclick="game.executeSynthesis()" style="width:100%; background:#9b59b6; font-weight:bold;">合成実行！</button>
+                    <button onclick="game.openSynthesis()" style="margin-top:5px; width:100%;">やり直す</button>
+                </div>
+            `;
+        }
+
+        html += `<button onclick="game.openForge()" style="margin-top:10px;">戻る</button>`;
+        this.ui.showModal(html);
+    }
+
+    selectSynthItem(invIdx) {
+        const item = this.player.inventory[invIdx];
+        this.synthBuffer.push(item);
+        this.updateSynthesisUI();
+    }
+
+    executeSynthesis() {
+        const s1 = this.synthBuffer[0];
+        const s2 = this.synthBuffer[1];
+
+        // 元のアイテムを削除
+        this.player.inventory = this.player.inventory.filter(it => it !== s1 && it !== s2);
+
+        // 合成ロジック
+        const rarity1 = s1.rarity || 1;
+        const rarity2 = s2.rarity || 1;
+        let newRarity = Math.max(rarity1, rarity2);
+
+        // レアリティ上昇判定 (同じレアリティ同士なら50%、違うなら20%で上昇)
+        const upChance = rarity1 === rarity2 ? 0.5 : 0.2;
+        if (Math.random() < upChance && newRarity < 5) {
+            newRarity++;
+            this.ui.log(`<span style="color:#ffcc00; font-weight:bold;">レアリティアップ！ ☆${newRarity} になりました！</span>`);
+        }
+
+        const isWeapon = s1.type === 'weapon';
+        const isAccessory = s1.type === 'accessory';
+
+        const newItem = JSON.parse(JSON.stringify(s1)); // ベースをコピー
+        newItem.rarity = newRarity;
+
+        // ステータス強化 (平均の1.2倍程度)
+        const boost = 1.2;
+        if (isWeapon) {
+            newItem.atk = Math.floor(((s1.atk || 0) + (s2.atk || 0)) / 2 * boost);
+            newItem.name = `真・${s1.name.replace("真・", "")}`;
+        } else if (isAccessory) {
+            for (let s in newItem.stats) {
+                newItem.stats[s] = Math.floor(((s1.stats[s] || 0) + (s2.stats[s] || 0)) / 2 * boost);
+            }
+            newItem.name = `極・${s1.name.replace("極・", "")}`;
+        } else {
+            for (let s in newItem.stats) {
+                newItem.stats[s] = Math.floor(((s1.stats[s] || 0) + (s2.stats[s] || 0)) / 2 * boost);
+            }
+            newItem.name = `硬・${s1.name.replace("硬・", "")}`;
+        }
+
+        // 属性の合成 (片方が無属性ならもう片方を継承)
+        if (s1.element === "無" || !s1.element) newItem.element = s2.element || "無";
+        else if (s2.element !== "無" && s2.element && s1.element !== s2.element) {
+            // 両方属性ありなら低確率でデュアル属性
+            if (Math.random() < 0.4) {
+                newItem.element = `${s1.element}・${s2.element}`;
+            }
+        }
+
+        this.player.inventory.push(newItem);
+        this.ui.log(`${newItem.name} (☆${newRarity}) を合成した！`);
         this.ui.updateHeader(this.player);
         this.ui.hideModal();
     }

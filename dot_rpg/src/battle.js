@@ -324,6 +324,11 @@ export class Battle {
             const accPrefixes = ["光る", "重厚な", "神秘的な", "古びた", "魔力漂う"];
             const name = `${accPrefixes[Math.floor(Math.random() * accPrefixes.length)]}${accNames[Math.floor(Math.random() * accNames.length)]}`;
 
+            // レアリティ判定 (基本1, ラッキーで上昇)
+            let rarity = 1;
+            if (Math.random() < 0.1 + luckBonus * 0.05) rarity = 2;
+            if (Math.random() < 0.02 + luckBonus * 0.02) rarity = 3;
+
             const accessory = {
                 type: 'accessory',
                 name: name,
@@ -333,7 +338,8 @@ export class Battle {
                     defense: Math.floor(this.monster.level / 10) + 1,
                     luck: Math.floor(Math.random() * 3) + 1
                 },
-                effects: null
+                effects: null,
+                rarity: rarity
             };
 
             // 1%の確率で特殊効果を付与

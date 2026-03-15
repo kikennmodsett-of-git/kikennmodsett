@@ -28,6 +28,10 @@ export class Inventory {
         // 属性色の取得用 (CSSクラスとのマッピング)
         const getElementClass = (element) => element ? `skill-element-${element}` : "";
         const getRareStyle = (isRare) => isRare ? 'color: #ffff00; font-weight: bold;' : '';
+        const getRarityStars = (rarity) => {
+            const r = rarity || 1;
+            return `<span style="color: #ffcc00;">${"☆".repeat(r)}</span>`;
+        };
 
         const slotMap = [
             { id: 'weapon', name: '武器', type: 'weapon' },
@@ -49,7 +53,8 @@ export class Inventory {
             const item = p.equipment[slot.id];
             const statText = item ? (slot.id === 'weapon' ? `(攻撃+${item.atk})` : `(防御+${item.stats ? item.stats.defense : 0})`) : "";
             const elementClass = item && item.element ? `skill-element-${item.element}` : "";
-            html += `<li class="${elementClass}" style="margin-bottom: 2px; padding: 2px 5px; border-radius: 4px;">${slot.name}: ${item ? item.name : "なし"} ${statText}</li>`;
+            const stars = item ? getRarityStars(item.rarity) : "";
+            html += `<li class="${elementClass}" style="margin-bottom: 2px; padding: 2px 5px; border-radius: 4px;">${slot.name}: ${item ? item.name : "なし"} ${statText} ${stars}</li>`;
         });
 
         // アクセサリの表示
@@ -57,7 +62,8 @@ export class Inventory {
             const statText = item && item.stats ? "(" + Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', ') + ")" : "";
             const elementClass = item && item.element ? `skill-element-${item.element}` : "";
             const effectText = item && item.effects ? " [特]" : "";
-            html += `<li class="${elementClass}" style="margin-bottom: 2px; padding: 2px 5px; border-radius: 4px;">アクセサリ${idx + 1}: ${item ? item.name : "なし"} ${statText}${effectText}</li>`;
+            const stars = item ? getRarityStars(item.rarity) : "";
+            html += `<li class="${elementClass}" style="margin-bottom: 2px; padding: 2px 5px; border-radius: 4px;">アクセサリ${idx + 1}: ${item ? item.name : "なし"} ${statText}${effectText} ${stars}</li>`;
         });
 
         html += `
@@ -87,7 +93,7 @@ export class Inventory {
 
                 html += `
                     <div class="shop-item ${elementClass}" style="padding: 5px; margin: 2px; font-size: 11px;">
-                        <span style="${rareStyle}">${item.name}</span><br>
+                        <span style="${rareStyle}">${item.name}</span> ${getRarityStars(item.rarity)}<br>
                         <small>${statText}</small>
                     </div>`;
             });
@@ -179,9 +185,10 @@ export class Inventory {
                 const statText = isWeapon ? `攻撃+${item.atk}` : Object.entries(item.stats || {}).map(([k, v]) => `${k}+${v}`).join(', ');
                 const elementClass = item.element ? `skill-element-${item.element}` : "";
                 const effectText = item.effects ? " [特殊効果あり]" : "";
+                const stars = "☆".repeat(item.rarity || 1);
                 html += `<li class="${elementClass}" style="margin-bottom: 5px; padding: 5px; border-radius: 4px;">
                     <button onclick="game.inventory.changeEquip('${slotId}', ${idx}, ${accessoryIdx})">装備する</button> 
-                    ${item.name} (${statText} / ${item.element || '無'}属性)${effectText}
+                    ${item.name} <span style="color:#ffcc00">${stars}</span> (${statText} / ${item.element || '無'}属性)${effectText}
                 </li>`;
             });
         }
