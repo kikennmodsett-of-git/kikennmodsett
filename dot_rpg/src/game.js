@@ -10,6 +10,8 @@ import { FusionSystem } from './fusion.js';
 
 class Game {
     constructor() {
+        if (window.game) return window.game;
+        window.game = this;
         if (window.isGameInitialized) return;
         window.isGameInitialized = true;
 
@@ -441,10 +443,11 @@ class Game {
         }
     }
 
-    // セーブ処理
-    saveGame(type = 'manual') {
+    // セーブ処理 (type: 'manual' (slot 1-5) または 'auto')
+    saveGame(type = 'manual', slot = 1) {
         const saveData = {
             updatedAt: Date.now(),
+            slot: type === 'auto' ? 'auto' : slot,
             player: {
                 name: this.player.name,
                 level: this.player.level,
@@ -474,41 +477,39 @@ class Game {
             isLastBossDefeated: this.isLastBossDefeated
         };
 
-        const key = type === 'manual' ? 'pixel_adventure_save_manual' : 'pixel_adventure_save_auto';
+        const key = type === 'auto' ? 'pixel_adventure_save_auto' : `pixel_adventure_save_slot_${slot}`;
 
         // 非同期風に実行してメインスレッドの詰まりを軽減
         setTimeout(() => {
             try {
                 localStorage.setItem(key, JSON.stringify(saveData));
-                const msg = type === 'manual' ? "【システム】データをセーブしました。" : "【システム】オートセーブ完了。";
+                const msg = type === 'auto' ? "【システム】オートセーブ完了。" : `【システム】スロット${slot}にセーブしました。`;
                 this.ui.log(msg);
             } catch (e) {
                 console.error("Save failed:", e);
-                this.ui.log("【システム】セーブに失敗しました。");
+                this.ui.log("【システム】セーブに失敗しました。容量不足の可能性があります。");
             }
         }, 0);
     }
 
-    // ロード処理 (type: 'manual' または 'auto')
-    loadGame(type) {
-        if (!type || (type !== 'manual' && type !== 'auto')) {
+    // ロード処理 (type: 'slot' または 'auto')
+    loadGame(type, slot = 1) {
+        if (!type || (type !== 'slot' && type !== 'auto')) {
             console.log("【システム】ロードタイプが指定されていないため、処理をスキップしました。");
             return;
         }
-        if (this.isBattleActive || this.isLoading) return; // 戦闘中やロード中は重複実行を制限
+        if (this.isBattleActive || this.isLoading) return;
         this.isLoading = true;
 
-        let data = null;
-        if (type === 'manual') {
-            const json = localStorage.getItem('pixel_adventure_save_manual') || localStorage.getItem('pixel_adventure_save');
-            data = json ? JSON.parse(json) : null;
-        } else if (type === 'auto') {
-            const json = localStorage.getItem('pixel_adventure_save_auto');
-            data = json ? JSON.parse(json) : null;
-        }
+        const key = type === 'auto' ? 'pixel_adventure_save_auto' : `pixel_adventure_save_slot_${slot}`;
+        const json = localStorage.getItem(key);
+        // 旧データ互換性
+        const oldJson = (type === 'slot' && slot === 1) ? (localStorage.getItem('pixel_adventure_save_manual') || localStorage.getItem('pixel_adventure_save')) : null;
+
+        let data = json ? JSON.parse(json) : (oldJson ? JSON.parse(oldJson) : null);
 
         if (!data) {
-            this.ui.log(`【システム】${type === 'manual' ? '手動' : 'オート'}セーブデータが見つかりません。`);
+            this.ui.log(`【システム】${type === 'slot' ? 'スロット' + slot : 'オート'}のセーブデータが見つかりません。`);
             this.isLoading = false;
             return;
         }
@@ -561,7 +562,55 @@ class Game {
             this.isLoading = false;
         }
     }
+
+    // ゲームオーバー時の専用ロードメニュー
+    showGameOverMenu() {
+        this.world.hide();
+        this.isBattleActive = false;
+        this.ui.clearActionPanel();
+        this.ui.log("<span style='color:#ff4b2b; font-weight:bold;'>【GAME OVER】どのデータから再開しますか？</span>");
+
+        const slots = [1, 2, 3, 4, 5];
+        slots.forEach(s => {
+            const json = localStorage.getItem(`pixel_adventure_save_slot_${s}`);
+            if (json) {
+                const data = JSON.parse(json);
+                const date = new Date(data.updatedAt).toLocaleTimeString();
+                this.ui.addAction(`Slot ${s} (Lv.${data.player.level} ${date})`, () => {
+                    this.loadGame('slot', s);
+                }, "background:#4a90e2; margin-bottom:5px; width:100%;");
+            }
+        });
+
+        const autoJson = localStorage.getItem('pixel_adventure_save_auto');
+        if (autoJson) {
+            const data = JSON.parse(autoJson);
+            const date = new Date(data.updatedAt).toLocaleTimeString();
+            this.ui.addAction(`Auto (Lv.${data.player.level} ${date})`, () => {
+                this.loadGame('auto');
+            }, "background:#f39c12; margin-bottom:5px; width:100%;");
+        }
+
+        // セーブデータがない場合の救済
+        const hasAnySave = slots.some(s => localStorage.getItem(`pixel_adventure_save_slot_${s}`)) || autoJson;
+        if (!hasAnySave) {
+            this.ui.addAction("最初からやり直す(救済)", () => {
+                this.respawnPlayer();
+            }, "background:#ff4b2b; width:100%;");
+        }
+    }
+
+    respawnPlayer() {
+        this.player.hp = this.player.maxHp;
+        this.isBattleActive = false;
+        this.world.playerX = 10;
+        this.world.playerY = 10;
+        this.showMainMap();
+        this.ui.updateHeader(this.player);
+        this.ui.log("【システム】始まりの町へ運ばれました。");
+    }
 }
 
 // グローバルに公開してHTMLのonclickから呼べるようにする
 window.game = new Game();
+export { Game };

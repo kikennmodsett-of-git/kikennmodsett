@@ -235,43 +235,45 @@ export class Inventory {
     }
 
     showSettings() {
-        const getMeta = (key) => {
+        const getMeta = (slot) => {
+            const key = slot === 'auto' ? 'pixel_adventure_save_auto' : `pixel_adventure_save_slot_${slot}`;
             const json = localStorage.getItem(key);
-            if (!json) return null;
-            const data = JSON.parse(json);
+            // 互換性チェック
+            const oldJson = (slot === 1) ? (localStorage.getItem('pixel_adventure_save_manual') || localStorage.getItem('pixel_adventure_save')) : null;
+
+            const data = json ? JSON.parse(json) : (oldJson ? JSON.parse(oldJson) : null);
+            if (!data) return null;
             const date = new Date(data.updatedAt).toLocaleString();
             return { date, lv: data.player.level, pos: data.player.respawnPoint.name };
         };
 
-        const manual = getMeta('pixel_adventure_save_manual') || getMeta('pixel_adventure_save');
-        const auto = getMeta('pixel_adventure_save_auto');
-
         let html = `
-            <h3>設定・システム</h3>
+            <h3>システム・セーブ/ロード</h3>
             <p>操作モード: <strong>${this.player.controlMode.toUpperCase()}</strong></p>
             <button onclick="game.inventory.toggleControl()">モード切り替え</button>
             <hr>
-            <h4>【データのロード】</h4>
+            <h4>【セーブスロット (1-5)】</h4>
             <div style="font-size: 11px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;">
         `;
 
-        if (manual) {
+        for (let i = 1; i <= 5; i++) {
+            const meta = getMeta(i);
             html += `
-                <p>手動セーブ: ${manual.date}<br><small>Lv.${manual.lv} / ${manual.pos}</small><br>
-                <button onclick="game.inventory.confirmLoad('manual')">このデータをロードする</button></p>
+                <div style="margin-bottom:10px; border-bottom:1px solid #444; padding-bottom:5px;">
+                    <strong> Slot ${i} </strong>: ${meta ? `${meta.date} (Lv.${meta.lv})` : '空のデータ'} <br>
+                    <button onclick="game.saveGame('manual', ${i}); game.inventory.showSettings();">保存</button>
+                    ${meta ? `<button onclick="game.inventory.confirmLoad('slot', ${i})">読込</button>` : ''}
+                </div>
             `;
-        } else {
-            html += "<p>手動セーブデータなし</p>";
         }
 
-        if (auto) {
-            html += `
-                <p style="margin-top:10px;">オートセーブ: ${auto.date}<br><small>Lv.${auto.lv} / ${auto.pos}</small><br>
-                <button onclick="game.inventory.confirmLoad('auto')">このデータをロードする</button></p>
-            `;
-        } else {
-            html += "<p>オートセーブデータなし</p>";
-        }
+        const auto = getMeta('auto');
+        html += `
+            <h4 style="margin-top:15px;">【オートセーブ】</h4>
+            <div style="font-size: 11px; background: rgba(255,165,0,0.2); padding: 5px; border-radius: 5px;">
+                ${auto ? `最新: ${auto.date} (Lv.${auto.lv}) <br><button onclick="game.inventory.confirmLoad('auto')">このデータをロード</button>` : '記録なし'}
+            </div>
+        `;
 
         html += `
             </div>
@@ -282,9 +284,9 @@ export class Inventory {
         document.getElementById('inv-content').innerHTML = html;
     }
 
-    confirmLoad(type) {
-        if (confirm("データをロードしますか？（現在の進行状況は失われます）")) {
-            window.game.loadGame(type);
+    confirmLoad(type, slot = 1) {
+        if (confirm(`${type === 'auto' ? 'オートセーブ' : 'スロット' + slot}をロードしますか？（現在の進行状況は失われます）`)) {
+            window.game.loadGame(type, slot);
             this.ui.hideModal();
         }
     }

@@ -279,7 +279,7 @@ export class Battle {
         if (hasSave) {
             this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。冒険を再開するにはデータをロードしてください。</span>");
             this.ui.addAction("データをロードして再開", () => {
-                window.game.inventory.showSettings();
+                window.game.showGameOverMenu(); // 専用のゲームオーバーメニュー（スロット選択）を表示
             }, "background: #ff4b2b; font-weight: bold;");
         } else {
             this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。セーブデータがないため、初期地点から復帰します。</span>");
