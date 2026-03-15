@@ -24,10 +24,12 @@ class TaikoGame {
         this.noteRadius = 40;
         this.noteSpeed = 400; // pixels per second
 
-        this.judgmentWindows = {
-            good: 0.05, // +-50ms
-            nice: 0.12, // +-120ms
-            bad: 0.20   // +-200ms
+        // Difficulty Config
+        this.difficulty = 'normal';
+        this.diffConfig = {
+            easy: { threshold: 0.1, minGap: 0.40, speed: 320 },
+            normal: { threshold: 0.05, minGap: 0.25, speed: 450 },
+            hard: { threshold: 0.03, minGap: 0.18, speed: 600 }
         };
 
         this.init();
@@ -40,6 +42,17 @@ class TaikoGame {
         document.getElementById('audio-upload').addEventListener('change', (e) => this.handleUpload(e));
         document.getElementById('start-btn').addEventListener('click', () => this.startGame());
         document.getElementById('retry-btn').addEventListener('click', () => location.reload());
+
+        // Difficulty button handling
+        const diffBtns = document.querySelectorAll('.diff-btn');
+        diffBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                diffBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.difficulty = btn.dataset.diff;
+                if (this.audioBuffer) this.generateChart(); // Re-analyze
+            });
+        });
 
         window.addEventListener('keydown', (e) => this.handleInput(e));
     }
@@ -61,10 +74,10 @@ class TaikoGame {
         this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         this.audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
 
-        document.getElementById('status').innerText = '譜面を生成しています...';
+        document.getElementById('difficulty-selection').classList.remove('hidden');
+        document.getElementById('status').innerText = '難易度を選択してください';
         await this.generateChart();
 
-        document.getElementById('status').innerText = '準備完了！';
         document.getElementById('start-btn').disabled = false;
     }
 
@@ -74,11 +87,13 @@ class TaikoGame {
         const detections = [];
 
         // Heuristic: Check energy peaks
+        // Use difficulty config
+        const config = this.diffConfig[this.difficulty];
         const frameSize = 1024;
         const overlap = 512;
         let lastPeakTime = -1;
-        const minGap = 0.20; // 200ms minimum gap
-        let threshold = 0.05; // Lowered threshold
+        const minGap = config.minGap; // 200ms minimum gap
+        const threshold = config.threshold; // Lowered threshold
 
         for (let i = 0; i < pcmData.length - frameSize; i += overlap) {
             let energy = 0;
@@ -100,7 +115,7 @@ class TaikoGame {
         }
 
         this.chart = detections;
-        document.getElementById('status').innerText = `解析完了: ${this.chart.length} 個のノーツを生成しました`;
+        document.getElementById('status').innerText = `解析完了: ${this.chart.length} 個のノーツを生成 (${this.difficulty.toUpperCase()})`;
         console.log(`Generated ${this.chart.length} notes.`);
     }
 
@@ -108,6 +123,8 @@ class TaikoGame {
         document.getElementById('setup-overlay').classList.add('hidden');
         this.isPlaying = true;
         this.startTime = this.audioCtx.currentTime + 1.0; // 1s delay
+
+        this.noteSpeed = this.diffConfig[this.difficulty].speed;
 
         this.sourceNode = this.audioCtx.createBufferSource();
         this.sourceNode.buffer = this.audioBuffer;

@@ -156,6 +156,35 @@ h1 {
     color: var(--kat-color);
 }
 
+#difficulty-selection {
+    margin-bottom: 2rem;
+}
+
+#difficulty-selection p {
+    font-size: 0.9rem;
+    color: #999;
+    margin-bottom: 0.8rem;
+}
+
+.difficulty-btns {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.diff-btn {
+    padding: 0.6rem 1.5rem !important;
+    font-size: 1rem !important;
+    background: #444 !important;
+    opacity: 0.6;
+}
+
+.diff-btn.active {
+    background: var(--kat-color) !important;
+    opacity: 1;
+    transform: scale(1.1);
+}
+
 button {
     padding: 1rem 3rem;
     font-size: 1.2rem;
