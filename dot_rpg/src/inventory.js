@@ -4,6 +4,11 @@ export class Inventory {
         this.ui = ui;
     }
 
+    getRarityStars(rarity) {
+        const r = rarity || 1;
+        return `<span style="color: #ffcc00;">${"☆".repeat(r)}</span>`;
+    }
+
     showMainMenu() {
         const html = `
             <div id="inventory-screen">
@@ -28,10 +33,6 @@ export class Inventory {
         // 属性色の取得用 (CSSクラスとのマッピング)
         const getElementClass = (element) => element ? `skill-element-${element}` : "";
         const getRareStyle = (isRare) => isRare ? 'color: #ffff00; font-weight: bold;' : '';
-        const getRarityStars = (rarity) => {
-            const r = rarity || 1;
-            return `<span style="color: #ffcc00;">${"☆".repeat(r)}</span>`;
-        };
 
         const slotMap = [
             { id: 'weapon', name: '武器', type: 'weapon' },
@@ -53,7 +54,7 @@ export class Inventory {
             const item = p.equipment[slot.id];
             const statText = item ? (slot.id === 'weapon' ? `(攻撃+${item.atk})` : `(防御+${item.stats ? item.stats.defense : 0})`) : "";
             const elementClass = item && item.element ? `skill-element-${item.element}` : "";
-            const stars = item ? getRarityStars(item.rarity) : "";
+            const stars = item ? this.getRarityStars(item.rarity) : "";
             html += `<li class="${elementClass}" style="margin-bottom: 2px; padding: 2px 5px; border-radius: 4px;">${slot.name}: ${item ? item.name : "なし"} ${statText} ${stars}</li>`;
         });
 
@@ -62,7 +63,7 @@ export class Inventory {
             const statText = item && item.stats ? "(" + Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', ') + ")" : "";
             const elementClass = item && item.element ? `skill-element-${item.element}` : "";
             const effectText = item && item.effects ? " [特]" : "";
-            const stars = item ? getRarityStars(item.rarity) : "";
+            const stars = item ? this.getRarityStars(item.rarity) : "";
             html += `<li class="${elementClass}" style="margin-bottom: 2px; padding: 2px 5px; border-radius: 4px;">アクセサリ${idx + 1}: ${item ? item.name : "なし"} ${statText}${effectText} ${stars}</li>`;
         });
 
@@ -93,7 +94,7 @@ export class Inventory {
 
                 html += `
                     <div class="shop-item ${elementClass}" style="padding: 5px; margin: 2px; font-size: 11px;">
-                        <span style="${rareStyle}">${item.name}</span> ${getRarityStars(item.rarity)}<br>
+                        <span style="${rareStyle}">${item.name}</span> ${this.getRarityStars(item.rarity)}<br>
                         <small>${statText}</small>
                     </div>`;
             });
@@ -143,9 +144,10 @@ export class Inventory {
             const item = p.equipment[slot.id];
             const itemName = item ? item.name : "（未装備）";
             const elementClass = item && item.element ? `skill-element-${item.element}` : "";
+            const stars = item ? this.getRarityStars(item.rarity) : "";
             html += `
                 <div class="equip-slot-item ${elementClass}" onclick="game.inventory.showEquipCategory('${slot.id}')">
-                    <strong>${slot.name}:</strong> <span>${itemName}</span>
+                    <strong>${slot.name}:</strong> <span>${itemName}</span> ${stars}
                 </div>
             `;
         });
@@ -154,9 +156,10 @@ export class Inventory {
         p.equipment.accessories.forEach((item, idx) => {
             const itemName = item ? item.name : "（未装備）";
             const elementClass = item && item.element ? `skill-element-${item.element}` : "";
+            const stars = item ? this.getRarityStars(item.rarity) : "";
             html += `
                 <div class="equip-slot-item ${elementClass}" onclick="game.inventory.showEquipCategory('accessory', ${idx})">
-                    <strong>アクセサリ${idx + 1}:</strong> <span>${itemName}</span>
+                    <strong>アクセサリ${idx + 1}:</strong> <span>${itemName}</span> ${stars}
                 </div>
             `;
         });

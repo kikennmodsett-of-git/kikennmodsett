@@ -273,7 +273,7 @@ class Game {
             <button onclick="window.game.openSynthesis()" style="background: #9b59b6; border-color: #fff; color: #fff;">装備を合成する</button>
         </div>
         <div id="forge-dynamic-area" style="margin-top: 15px;"></div>
-        <button onclick="game.ui.hideModal()" style="margin-top:10px;">店を出る</button>`;
+        <button onclick="window.game.ui.hideModal()" style="margin-top:10px;">店を出る</button>`;
         this.ui.showModal(html);
         this.forgeData = { category: '', materials: {} };
     }
@@ -473,7 +473,7 @@ class Game {
                     const stars = "☆".repeat(item.rarity || 1);
                     html += `<div style="margin-bottom:5px; border-bottom:1px solid #333; padding:5px; display:flex; justify-content:space-between; align-items:center;">
                         <span>${item.name} <span style="color:#ffcc00">${stars}</span></span>
-                        <button onclick="game.selectSynthItem(${p.inventory.indexOf(item)})">選択</button>
+                        <button onclick="window.game.selectSynthItem(${p.inventory.indexOf(item)})">選択</button>
                     </div>`;
                 });
             }
@@ -486,18 +486,20 @@ class Game {
                 <div style="text-align:center; padding:10px; background:rgba(155, 89, 182, 0.2); border:1px solid #9b59b6;">
                     <p>${s1.name}(☆${s1.rarity || 1})  +  ${s2.name}(☆${s2.rarity || 1})</p>
                     <p>↓↓↓</p>
-                    <button onclick="game.executeSynthesis()" style="width:100%; background:#9b59b6; font-weight:bold;">合成実行！</button>
-                    <button onclick="game.openSynthesis()" style="margin-top:5px; width:100%;">やり直す</button>
+                    <button onclick="window.game.executeSynthesis()" style="width:100%; background:#9b59b6; font-weight:bold;">合成実行！</button>
+                    <button onclick="window.game.openSynthesis()" style="margin-top:5px; width:100%;">やり直す</button>
                 </div>
             `;
         }
 
-        html += `<button onclick="game.openForge()" style="margin-top:10px;">戻る</button>`;
+        html += `<button onclick="window.game.openForge()" style="margin-top:10px;">戻る</button>`;
         this.ui.showModal(html);
     }
 
     selectSynthItem(invIdx) {
+        if (invIdx === -1) return;
         const item = this.player.inventory[invIdx];
+        if (!item) return;
         this.synthBuffer.push(item);
         this.updateSynthesisUI();
     }
@@ -572,7 +574,7 @@ class Game {
         }
         let html = `<h3>禁断のスキル合体所</h3><p>合体させる素材を2つ選んでください。<br>(合体済みスキルも素材にできます)</p>`;
         allSkills.forEach((s) => {
-            html += `<button onclick="game.selectFusion('${s.id}')" style="margin:2px;">${s.name}</button> `;
+            html += `<button onclick="window.game.selectFusion('${s.id}')" style="margin:2px;">${s.name}</button> `;
         });
         this.ui.showModal(html);
         this.fusionBuffer = [];
@@ -608,16 +610,7 @@ class Game {
         }
     }
 
-    // リスポーン処理
-    respawnPlayer() {
-        const rp = this.player.respawnPoint;
-        this.player.hp = this.player.maxHp;
-        this.world.playerX = rp.x;
-        this.world.playerY = rp.y;
-        this.ui.log(`... ${rp.name} で意識を取り戻した。`);
-        this.ui.updateHeader(this.player);
-        this.showMainMap();
-    }
+    // リスポーン処理は末尾の定義に一本化
 
     // リスポーン地点の更新確認プロンプト
     askToUpdateRespawnPoint(town) {
