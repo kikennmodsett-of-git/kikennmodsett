@@ -27,9 +27,9 @@ class TaikoGame {
         // Difficulty Config
         this.difficulty = 'normal';
         this.diffConfig = {
-            easy: { threshold: 0.1, minGap: 0.40, speed: 320 },
-            normal: { threshold: 0.05, minGap: 0.25, speed: 450 },
-            hard: { threshold: 0.03, minGap: 0.18, speed: 600 }
+            easy: { thresholdRatio: 0.15, minGap: 0.45, speed: 320 },
+            normal: { thresholdRatio: 0.10, minGap: 0.28, speed: 450 },
+            hard: { thresholdRatio: 0.06, minGap: 0.18, speed: 620 }
         };
 
         this.init();
@@ -70,15 +70,18 @@ class TaikoGame {
         document.getElementById('file-name').innerText = file.name;
         document.getElementById('status').innerText = '楽曲を読み込んでいます...';
 
-        const arrayBuffer = await file.arrayBuffer();
-        this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        this.audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            this.audioBuffer = await this.audioCtx.decodeAudioData(arrayBuffer);
 
-        document.getElementById('difficulty-selection').classList.remove('hidden');
-        document.getElementById('status').innerText = '難易度を選択してください';
-        await this.generateChart();
-
-        document.getElementById('start-btn').disabled = false;
+            document.getElementById('difficulty-selection').classList.remove('hidden');
+            await this.generateChart();
+            document.getElementById('start-btn').disabled = false;
+        } catch (err) {
+            console.error(err);
+            document.getElementById('status').innerText = '読み込みに失敗しました。';
+        }
     }
 
     async generateChart() {
@@ -86,14 +89,24 @@ class TaikoGame {
         const sampleRate = this.audioBuffer.sampleRate;
         const detections = [];
 
-        // Heuristic: Check energy peaks
-        // Use difficulty config
-        const config = this.diffConfig[this.difficulty];
         const frameSize = 1024;
         const overlap = 512;
+
+        // 1. Scan for Max Energy
+        let maxEnergy = 0;
+        for (let i = 0; i < pcmData.length - frameSize; i += overlap * 4) { // Fast scan
+            let energy = 0;
+            for (let j = 0; j < frameSize; j++) {
+                energy += Math.abs(pcmData[i + j]);
+            }
+            if (energy / frameSize > maxEnergy) maxEnergy = energy / frameSize;
+        }
+
+        // 2. Dynamic Analysis
+        const config = this.diffConfig[this.difficulty];
+        const threshold = Math.max(0.01, maxEnergy * config.thresholdRatio);
+        const minGap = config.minGap;
         let lastPeakTime = -1;
-        const minGap = config.minGap; // 200ms minimum gap
-        const threshold = config.threshold; // Lowered threshold
 
         for (let i = 0; i < pcmData.length - frameSize; i += overlap) {
             let energy = 0;
@@ -114,9 +127,16 @@ class TaikoGame {
             }
         }
 
+        // 3. Fallback (If no notes, generate periodically)
+        if (detections.length === 0) {
+            const songDuration = this.audioBuffer.duration;
+            for (let t = 2; t < songDuration - 2; t += 1.0) {
+                detections.push({ time: t, type: 0 });
+            }
+        }
+
         this.chart = detections;
         document.getElementById('status').innerText = `解析完了: ${this.chart.length} 個のノーツを生成 (${this.difficulty.toUpperCase()})`;
-        console.log(`Generated ${this.chart.length} notes.`);
     }
 
     startGame() {
