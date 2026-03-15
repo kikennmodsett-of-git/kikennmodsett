@@ -17,13 +17,20 @@ class Game3D {
         this.startTime = 0;
         this.elapsedTime = 0;
 
+        // Physics & Controls
         this.playerVelocity = new THREE.Vector3();
-        this.playerRotation = 0; // Yaw angle in radians
+        this.playerRotation = 0;
         this.canJump = true;
         this.gravity = -0.015;
-        this.moveSpeed = 0.15; // Increased speed for better feel
+        this.moveSpeed = 0.16;
         this.rotationSpeed = 0.05;
         this.jumpForce = 0.38;
+
+        // Advanced Systems (Sections & Respawn)
+        this.checkpoint = new THREE.Vector3(0, 2, 0);
+        this.currentSection = 0;
+        this.sectionSplits = [];
+        this.sectionThresholds = [-80, -180, -280]; // Z-coordinates for section transitions
 
         this.init();
     }
@@ -34,51 +41,47 @@ class Game3D {
         this.renderer.shadowMap.enabled = true;
         this.container.appendChild(this.renderer.domElement);
 
-        this.scene.background = new THREE.Color(0x020215);
-        // Visibility improvement: Farther fog
-        this.scene.fog = new THREE.Fog(0x020215, 30, 150);
+        this.scene.background = new THREE.Color(0x010108);
+        this.scene.fog = new THREE.Fog(0x010108, 40, 180);
 
-        // Lights enhancement
-        const ambientLight = new THREE.AmbientLight(0x404040, 3.5); // Brighter ambient
+        // Lights Optimization
+        const ambientLight = new THREE.AmbientLight(0x404040, 4.0);
         this.scene.add(ambientLight);
 
-        const pointLight = new THREE.PointLight(0x00ffff, 15, 150); // Stronger point light
-        pointLight.position.set(10, 30, 10);
+        const pointLight = new THREE.PointLight(0x00ffff, 20, 200);
+        pointLight.position.set(20, 40, 20);
         pointLight.castShadow = true;
         this.scene.add(pointLight);
 
         // --- Create Player ---
         this.player = new THREE.Group();
-
         const bodyGeo = new THREE.BoxGeometry(1, 1, 1);
         const bodyMat = new THREE.MeshStandardMaterial({
             color: 0x00ffff,
             emissive: 0x00ffff,
-            emissiveIntensity: 0.3
+            emissiveIntensity: 0.5
         });
         const body = new THREE.Mesh(bodyGeo, bodyMat);
         body.castShadow = true;
         this.player.add(body);
 
-        const eyeGeo = new THREE.PlaneGeometry(0.2, 0.4);
+        // Eyes
         const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-        const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+        const eyeL = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.4), eyeMat);
         eyeL.position.set(-0.25, 0.1, 0.51);
-        const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+        const eyeR = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.4), eyeMat);
         eyeR.position.set(0.25, 0.1, 0.51);
         this.player.add(eyeL, eyeR);
 
-        const hornGeo = new THREE.ConeGeometry(0.1, 0.6, 4);
+        // Ornament
         const hornMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-        const h1 = new THREE.Mesh(hornGeo, hornMat);
-        h1.position.set(-0.5, 0.6, 0);
-        h1.rotation.z = 0.6;
-        const h2 = new THREE.Mesh(hornGeo, hornMat);
-        h2.position.set(0.5, 0.6, 0);
-        h2.rotation.z = -0.6;
+        const h1 = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.7, 4), hornMat);
+        h1.position.set(-0.5, 0.7, 0); h1.rotation.z = 0.6;
+        const h2 = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.7, 4), hornMat);
+        h2.position.set(0.5, 0.7, 0); h2.rotation.z = -0.6;
         this.player.add(h1, h2);
 
-        this.player.position.set(0, 2, 0);
+        this.player.position.copy(this.checkpoint);
         this.scene.add(this.player);
 
         this.createLevel();
@@ -90,41 +93,40 @@ class Game3D {
 
         document.getElementById('start-btn').onclick = () => this.startGame();
         document.getElementById('retry-btn').onclick = () => location.reload();
-        document.getElementById('restart-btn').onclick = () => location.reload();
+        document.getElementById('restart-btn').onclick = () => this.respawn();
 
         this.animate();
     }
 
     addDecorations() {
-        for (let i = 0; i < 35; i++) {
-            const size = Math.random() * 4 + 1;
-            const geo = new THREE.OctahedronGeometry(size, 0);
-            const mat = new THREE.MeshStandardMaterial({
-                color: Math.random() > 0.5 ? 0x00ffff : 0xff00ff,
-                emissive: Math.random() > 0.5 ? 0x00ffff : 0xff00ff,
-                emissiveIntensity: 0.6,
-                transparent: true,
-                opacity: 0.6
-            });
-            const crystal = new THREE.Mesh(geo, mat);
-            crystal.position.set(
-                (Math.random() - 0.5) * 100,
-                (Math.random() - 0.5) * 60,
-                (Math.random() - 0.5) * 150 - 50
+        // More Crystals with individual lights
+        for (let i = 0; i < 50; i++) {
+            const size = Math.random() * 5 + 2;
+            const color = Math.random() > 0.5 ? 0x00ffff : 0xff00ff;
+            const crystal = new THREE.Mesh(
+                new THREE.OctahedronGeometry(size, 0),
+                new THREE.MeshStandardMaterial({
+                    color: color, emissive: color, emissiveIntensity: 1.2, transparent: true, opacity: 0.7
+                })
             );
-            crystal.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            crystal.position.set((Math.random() - 0.5) * 120, (Math.random() - 0.5) * 80, (Math.random() - 0.5) * 400 - 150);
             this.scene.add(crystal);
+
+            // Subtle glow lights
+            if (i % 5 === 0) {
+                const pLight = new THREE.PointLight(color, 15, 40);
+                pLight.position.copy(crystal.position);
+                this.scene.add(pLight);
+            }
         }
 
-        for (let i = 0; i < 7; i++) {
-            const ringGeo = new THREE.TorusGeometry(25 + i * 10, 0.05, 16, 120);
-            const ringMat = new THREE.MeshBasicMaterial({
-                color: 0x5555ff,
-                transparent: true,
-                opacity: 0.2
-            });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.position.set(0, 0, -40);
+        // Orbital Rings
+        for (let i = 0; i < 12; i++) {
+            const ring = new THREE.Mesh(
+                new THREE.TorusGeometry(30 + i * 15, 0.08, 16, 120),
+                new THREE.MeshBasicMaterial({ color: 0x5555ff, transparent: true, opacity: 0.15 })
+            );
+            ring.position.set(0, 0, -150);
             ring.rotation.x = Math.PI / 2.5;
             ring.rotation.y = Math.random() * Math.PI;
             this.scene.add(ring);
@@ -132,74 +134,69 @@ class Game3D {
     }
 
     createLevel() {
-        this.addPlatform(0, 0, 0, 6, 6);
+        // Section 1
+        this.addPlatform(0, 0, 0, 8, 8);
+        for (let i = 1; i <= 8; i++) {
+            const x = Math.sin(i) * 5;
+            this.addPlatform(x, i * 0.5, i * -10, 4, 4);
+        }
 
-        const coords = [
-            [0, 0, -12],
-            [6, 1.5, -24],
-            [-4, 2, -36],
-            [5, 2.5, -50],
-            [0, 4, -65],
-            [-8, 3, -80],
-            [0, 4, -95]
-        ];
+        // Section 2
+        this.addPlatform(0, 5, -90, 10, 10, 0x00ffff); // Checkpoint 1
+        for (let i = 1; i <= 8; i++) {
+            const x = Math.cos(i) * 8;
+            this.addPlatform(x, 5 + i * 0.5, -90 + i * -12, 4, 4);
+        }
 
-        coords.forEach(pos => {
-            this.addPlatform(pos[0], pos[1], pos[2], 4, 4);
-        });
+        // Section 3
+        this.addPlatform(0, 10, -200, 10, 10, 0xff00ff); // Checkpoint 2
+        for (let i = 1; i <= 10; i++) {
+            const x = (Math.random() - 0.5) * 12;
+            this.addPlatform(x, 10 + i * 0.8, -200 + i * -12, 3.5, 3.5);
+        }
 
-        this.goal = this.addPlatform(0, 5, -115, 10, 10, 0x00ff00);
-
-        const markerGeo = new THREE.TorusGeometry(3.5, 0.2, 16, 100);
-        const markerMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00 });
-        const marker = new THREE.Mesh(markerGeo, markerMat);
-        marker.position.set(0, 10, -115);
+        // Goal
+        this.goal = this.addPlatform(0, 20, -350, 15, 15, 0x00ff00);
+        const marker = new THREE.Mesh(
+            new THREE.TorusGeometry(5, 0.3, 16, 100),
+            new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 2 })
+        );
+        marker.position.set(0, 28, -350);
         this.scene.add(marker);
 
-        const lightMarker = new THREE.PointLight(0x00ff00, 30, 60);
-        lightMarker.position.set(0, 10, -115);
-        this.scene.add(lightMarker);
+        const goalLight = new THREE.PointLight(0x00ff00, 50, 100);
+        goalLight.position.set(0, 28, -350);
+        this.scene.add(goalLight);
     }
 
     addPlatform(x, y, z, w, d, color = 0x222244) {
         const group = new THREE.Group();
 
-        // Visibility improvement: Brighter top
-        const topGeo = new THREE.CylinderGeometry(w / 1.5, w / 1.5, 0.5, 6);
+        // Island Top (High Emissive)
         const topMat = new THREE.MeshStandardMaterial({
-            color: color,
-            emissive: color,
-            emissiveIntensity: 0.1
+            color: color, emissive: color, emissiveIntensity: 0.8
         });
-        const topMesh = new THREE.Mesh(topGeo, topMat);
+        const topMesh = new THREE.Mesh(new THREE.CylinderGeometry(w / 1.5, w / 1.5, 0.6, 6), topMat);
         topMesh.receiveShadow = true;
         group.add(topMesh);
 
-        const bottomGeo = new THREE.CylinderGeometry(w / 1.5, 0, 4, 6);
-        const bottomMat = new THREE.MeshStandardMaterial({
-            color: 0x111122,
-            transparent: true,
-            opacity: 0.95
-        });
-        const bottomMesh = new THREE.Mesh(bottomGeo, bottomMat);
-        bottomMesh.position.y = -2.25;
+        // Pillar
+        const bottomMat = new THREE.MeshStandardMaterial({ color: 0x050510, transparent: true, opacity: 0.9 });
+        const bottomMesh = new THREE.Mesh(new THREE.CylinderGeometry(w / 1.5, 0, 5, 6), bottomMat);
+        bottomMesh.position.y = -2.8;
         group.add(bottomMesh);
 
-        const auraGeo = new THREE.CylinderGeometry(w / 1.5 + 0.4, w / 1.5 + 0.4, 0.2, 6);
+        // Neon Aura (Glow)
         const auraMat = new THREE.MeshBasicMaterial({
-            color: color === 0x00ff00 ? 0x00ff00 : 0x00ffff,
-            transparent: true,
-            opacity: 0.4
+            color: color === 0x222244 ? 0x00ffff : color, transparent: true, opacity: 0.5
         });
-        const aura = new THREE.Mesh(auraGeo, auraMat);
+        const aura = new THREE.Mesh(new THREE.CylinderGeometry(w / 1.5 + 0.5, w / 1.5 + 0.5, 0.2, 6), auraMat);
         aura.position.y = -0.3;
         group.add(aura);
 
         group.position.set(x, y, z);
         this.scene.add(group);
-
-        const pData = { x, y, z, w, d };
-        this.platforms.push(pData);
+        this.platforms.push({ x, y, z, w, d });
         return group;
     }
 
@@ -209,30 +206,46 @@ class Game3D {
         this.startTime = Date.now();
     }
 
-    onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    respawn() {
+        this.player.position.copy(this.checkpoint);
+        this.playerVelocity.set(0, 0, 0);
+        document.getElementById('fall-overlay').classList.add('hidden');
+        this.isMoving = true;
+        this.isGameOver = false;
     }
 
     update() {
         if (!this.isMoving || this.isGameOver) return;
 
         this.elapsedTime = (Date.now() - this.startTime) / 1000;
-        document.getElementById('timer').innerText = `TIME: ${this.elapsedTime.toFixed(2)}`;
+        document.getElementById('timer').innerText = `TOTAL: ${this.elapsedTime.toFixed(2)}s`;
 
-        // Rotation (Arrow keys)
+        // Section & Checkpoint Logic
+        if (this.currentSection < this.sectionThresholds.length) {
+            if (this.player.position.z < this.sectionThresholds[this.currentSection]) {
+                const splitTime = this.elapsedTime;
+                this.sectionSplits.push(splitTime);
+                this.currentSection++;
+
+                // Update Checkpoint
+                this.checkpoint.copy(this.player.position);
+
+                // Update UI
+                const splitsEl = document.getElementById('splits');
+                splitsEl.innerHTML = `SECTION ${this.currentSection + 1}<br>` +
+                    this.sectionSplits.map((t, i) => `<span style="font-size:0.8em; opacity:0.7">S${i + 1}: ${t.toFixed(2)}s</span>`).join(' | ');
+            }
+        }
+
+        // Controls
         if (this.keys['ArrowLeft']) this.playerRotation += this.rotationSpeed;
         if (this.keys['ArrowRight']) this.playerRotation -= this.rotationSpeed;
         this.player.rotation.y = this.playerRotation;
 
-        // Relative Movement
-        // Relative Movement
-        const moveVec = new THREE.Vector3();
-        const isMovingInput = this.keys['KeyW'] || this.keys['KeyS'] || this.keys['KeyA'] || this.keys['KeyD'];
-        const isDashing = isMovingInput && (this.keys['ShiftLeft'] || this.keys['ShiftRight']);
-        const currentSpeed = isDashing ? this.moveSpeed * 1.6 : this.moveSpeed;
+        const isDashing = (this.keys['ShiftLeft'] || this.keys['ShiftRight']);
+        const currentSpeed = isDashing ? this.moveSpeed * 1.8 : this.moveSpeed;
 
+        const moveVec = new THREE.Vector3();
         if (this.keys['KeyW']) moveVec.z -= 1;
         if (this.keys['KeyS']) moveVec.z += 1;
         if (this.keys['KeyA']) moveVec.x -= 1;
@@ -240,31 +253,25 @@ class Game3D {
 
         if (moveVec.length() > 0) {
             moveVec.normalize().multiplyScalar(currentSpeed);
-            // Rotate move vector by player's rotation
             moveVec.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerRotation);
-            this.player.position.x += moveVec.x;
-            this.player.position.z += moveVec.z;
+            this.player.position.add(moveVec);
         }
 
-        // Jump
+        // Physics
         if (this.keys['Space'] && this.canJump) {
             this.playerVelocity.y = this.jumpForce;
             this.canJump = false;
         }
-
-        // Physics
         this.playerVelocity.y += this.gravity;
         this.player.position.y += this.playerVelocity.y;
 
-        // Collision detection
+        // Collision
         let onGround = false;
         this.platforms.forEach(p => {
             const dx = Math.abs(this.player.position.x - p.x);
             const dz = Math.abs(this.player.position.z - p.z);
-            const py = this.player.position.y;
-
-            if (dx < (p.w / 1.15) && dz < (p.d / 1.15)) {
-                if (py > p.y && py < p.y + 1.3) {
+            if (dx < p.w / 1.2 && dz < p.d / 1.2) {
+                if (this.player.position.y > p.y && this.player.position.y < p.y + 1.5) {
                     if (this.playerVelocity.y < 0) {
                         this.player.position.y = p.y + 0.75;
                         this.playerVelocity.y = 0;
@@ -275,45 +282,36 @@ class Game3D {
             }
         });
 
-        // Fall check
-        if (this.player.position.y < -20) {
-            this.gameOver(false);
-        }
-
-        // Goal check
-        if (this.player.position.z < -110 && Math.abs(this.player.position.x) < 5) {
-            this.gameOver(true);
-        }
-
-        // Camera follow (3rd Person Perspective Optimization)
-        // Offset: Behind and slightly above player
-        const cameraOffset = new THREE.Vector3(0, 4, 7);
-        cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerRotation);
-
-        const targetCamPos = this.player.position.clone().add(cameraOffset);
-        // Smoothly lerp camera position
-        this.camera.position.lerp(targetCamPos, 0.1);
-
-        // Look at a point slightly above the player's head for better visibility
-        const lookAtPos = this.player.position.clone().add(new THREE.Vector3(0, 1.5, 0));
-        this.camera.lookAt(lookAtPos);
-    }
-
-    gameOver(win) {
-        this.isGameOver = true;
-        this.isMoving = false;
-        if (win) {
-            document.getElementById('final-time').innerText = this.elapsedTime.toFixed(2);
-            document.getElementById('finish-overlay').classList.remove('hidden');
-        } else {
+        // Fall check (Auto-respawn UI)
+        if (this.player.position.y < -25) {
+            this.isMoving = false;
             document.getElementById('fall-overlay').classList.remove('hidden');
         }
+
+        // Goal
+        if (this.player.position.z < -340) {
+            this.isGameOver = true;
+            this.isMoving = false;
+            document.getElementById('final-time').innerText = this.elapsedTime.toFixed(2);
+            document.getElementById('finish-overlay').classList.remove('hidden');
+        }
+
+        // Camera
+        const camOffset = new THREE.Vector3(0, 4, 8).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.playerRotation);
+        this.camera.position.lerp(this.player.position.clone().add(camOffset), 0.1);
+        this.camera.lookAt(this.player.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
     }
 
     animate() {
         requestAnimationFrame(() => this.animate());
         this.update();
         this.renderer.render(this.scene, this.camera);
+    }
+
+    onWindowResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
     }
 }
 
