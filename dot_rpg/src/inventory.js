@@ -125,6 +125,7 @@ export class Inventory {
         if (this.player.allocatePoint(stat)) {
             this.showStats();
             this.ui.updateHeader(this.player);
+            window.game.saveGame('auto');
         }
     }
 

@@ -477,3 +477,5 @@ document.getElementById('playAgainBtn').addEventListener('click', () => {
     victoryScreen.classList.add('hidden');
     startScreen.classList.remove('hidden');
 });
+// Initialize
+loadHighScores();

@@ -38,7 +38,28 @@ class TaikoGame {
             hard: { thresholdRatio: 0.06, minGap: 0.18, speed: 620 }
         };
 
+        this.highScores = { easy: 0, normal: 0, hard: 0 };
+        this.loadHighScores();
+
         this.init();
+    }
+
+    loadHighScores() {
+        const saved = localStorage.getItem('taikoHighScores');
+        if (saved) {
+            try {
+                this.highScores = JSON.parse(saved);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }
+
+    saveHighScore(diff, score) {
+        if (score > this.highScores[diff]) {
+            this.highScores[diff] = score;
+            localStorage.setItem('taikoHighScores', JSON.stringify(this.highScores));
+        }
     }
 
     init() {
@@ -150,7 +171,8 @@ class TaikoGame {
         }
 
         this.chart = detections;
-        document.getElementById('status').innerText = `解析完了: ${this.chart.length} 個のノーツを生成 (${this.difficulty.toUpperCase()})`;
+        const best = this.highScores[this.difficulty];
+        document.getElementById('status').innerText = `解析完了: ${this.chart.length} 個のノーツを生成 (${this.difficulty.toUpperCase()})\nBest Score: ${best}`;
     }
 
     startGame() {
@@ -301,6 +323,10 @@ class TaikoGame {
 
         const clearThreshold = this.chart.length * 45; // Adjusted threshold (45 score per note)
         const isClear = this.score >= clearThreshold;
+
+        if (isClear) {
+            this.saveHighScore(this.difficulty, this.score);
+        }
 
         document.getElementById('result-overlay').classList.remove('hidden');
         document.getElementById('result-title').innerText = isClear ? 'STAGE CLEARED' : 'FAILED';

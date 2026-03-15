@@ -18,9 +18,18 @@
             <h1>NEON BARRAGE</h1>
             <p>Avoid the bullets. Survive 3 phases.</p>
             <div class="difficulty-select">
-                <button class="btn" data-difficulty="easy">EASY</button>
-                <button class="btn" data-difficulty="normal">NORMAL</button>
-                <button class="btn" data-difficulty="hard">HARD</button>
+                <div class="btn-group">
+                    <button class="btn" data-difficulty="easy">EASY</button>
+                    <span class="high-score">Best: <span id="bestEasy">0.00</span>s</span>
+                </div>
+                <div class="btn-group">
+                    <button class="btn" data-difficulty="normal">NORMAL</button>
+                    <span class="high-score">Best: <span id="bestNormal">0.00</span>s</span>
+                </div>
+                <div class="btn-group">
+                    <button class="btn" data-difficulty="hard">HARD</button>
+                    <span class="high-score">Best: <span id="bestHard">0.00</span>s</span>
+                </div>
             </div>
 
             <div class="control-select">

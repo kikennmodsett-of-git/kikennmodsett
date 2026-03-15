@@ -57,8 +57,11 @@ function init() {
 
     blockEl.addEventListener('click', handleBlockClick);
 
-    // Auto-save every 30 seconds
-    setInterval(saveGame, 30000);
+    // Auto-save every 5 seconds
+    setInterval(saveGame, 5000);
+
+    // Save on exit
+    window.addEventListener('beforeunload', saveGame);
 }
 
 function handleBlockClick(e) {

@@ -32,16 +32,18 @@ class Game {
     }
 
     init() {
-        this.ui.log("Pixel Adventure Ver 2.5 へようこそ！");
-        this.ui.log("※オートロードは無効です。続きから遊ぶ場合は「ステータス > 設定」からロードしてください。");
-        this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
-
         document.getElementById('btn-status').onclick = () => this.inventory.showMainMenu();
         document.getElementById('btn-quests').onclick = () => this.showQuests();
         document.getElementById('btn-save').onclick = () => this.saveGame('manual');
 
-        // 初期スキル習得 (ロードしていない場合のみ)
+        // 自動ロードの実行 (もしオートセーブデータがあれば)
+        if (localStorage.getItem('pixel_adventure_save_auto')) {
+            this.loadGame('auto');
+        }
+
+        this.ui.log("Pixel Adventure Ver 2.5 へようこそ！");
         if (!this.isLoaded) {
+            this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
             this.player.learnSkill(this.skillDB[0]);
             this.player.learnSkill(this.skillDB[3]);
         }
@@ -111,6 +113,7 @@ class Game {
             this.player.hp = this.player.maxHp;
             this.ui.log(`宿屋に泊まった。HPが全回復した！ (費用: ${cost} G, 人徳割引適用)`);
             this.ui.updateHeader(this.player);
+            this.saveGame('auto');
         } else {
             this.ui.log("ゴールドが足りない！");
         }
@@ -135,6 +138,7 @@ class Game {
         if (this.player.allocatePoint(stat)) {
             this.showStatus();
             this.ui.updateHeader(this.player);
+            this.saveGame('auto');
         }
     }
 
@@ -211,6 +215,7 @@ class Game {
             }
             this.ui.log(`${item.name} を購入しました！`);
             this.ui.updateHeader(this.player);
+            this.saveGame('auto');
             this.openShop();
         } else {
             this.ui.log("ゴールドが足りません！");
@@ -431,6 +436,7 @@ class Game {
         this.player.inventory.push(newItem);
         this.ui.log(`${finalName} (${element}属性) を作り上げた！`);
         this.ui.updateHeader(this.player);
+        this.saveGame('auto');
         this.ui.hideModal();
     }
 
@@ -558,6 +564,7 @@ class Game {
         this.player.inventory.push(newItem);
         this.ui.log(`${newItem.name} (☆${newRarity}) を合成した！`);
         this.ui.updateHeader(this.player);
+        this.saveGame('auto');
         this.ui.hideModal();
     }
 
@@ -619,6 +626,7 @@ class Game {
             this.ui.addAction("復活地点をここに設定する", () => {
                 this.player.respawnPoint = { x: town.x, y: town.y, name: town.name };
                 this.ui.log(`${town.name} を復活の場所に設定しました。`);
+                this.saveGame('auto');
                 this.openTownMenu(town);
             });
         }
@@ -735,6 +743,9 @@ class Game {
             this.showMainMap();
 
             this.ui.log("【システム】セーブデータをロードしました！");
+            if (type === 'auto') {
+                this.ui.log("Pixel Adventure Ver 2.5 へようこそ！続きから再会しました。");
+            }
             this.ui.updateHeader(this.player);
         } catch (e) {
             console.error("Load failed:", e);

@@ -42,7 +42,24 @@ class Game3D {
         this.sectionThresholds = [-100, -220, -350, -500];
         this.sectionSplits = [];
 
+        this.bestTime = Infinity;
+        this.loadBestTime();
+
         this.init();
+    }
+
+    loadBestTime() {
+        const saved = localStorage.getItem('dash3dBestTime');
+        if (saved) {
+            this.bestTime = parseFloat(saved);
+        }
+    }
+
+    saveBestTime(time) {
+        if (time < this.bestTime) {
+            this.bestTime = time;
+            localStorage.setItem('dash3dBestTime', JSON.stringify(this.bestTime));
+        }
     }
 
     init() {
@@ -75,6 +92,7 @@ class Game3D {
         document.getElementById('retry-btn').onclick = () => location.reload();
         document.getElementById('restart-btn').onclick = () => this.respawn();
 
+        this.updateBestTimeUI();
         this.animate();
     }
 
@@ -314,6 +332,7 @@ class Game3D {
         if (this.player.position.z < -380) {
             this.isGameOver = true; this.isMoving = false;
             document.getElementById('final-time').innerText = this.elapsedTime.toFixed(2);
+            this.saveBestTime(this.elapsedTime);
             document.getElementById('finish-overlay').classList.remove('hidden');
         }
 
@@ -321,6 +340,13 @@ class Game3D {
         this.camera.position.lerp(this.player.position.clone().add(camOffset), 0.15);
         this.camera.lookAt(this.player.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
         if (this.particles) this.particles.position.z = this.player.position.z;
+    }
+
+    updateBestTimeUI() {
+        const el = document.getElementById('best-time-info');
+        if (el) {
+            el.innerText = `Best Time: ${this.bestTime === Infinity ? '--' : this.bestTime.toFixed(2)}s`;
+        }
     }
 
     animate() { requestAnimationFrame(() => this.animate()); this.update(); this.renderer.render(this.scene, this.camera); }

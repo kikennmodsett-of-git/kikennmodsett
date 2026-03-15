@@ -20,9 +20,12 @@
                 <h1 class="title">MONO-JUMP</h1>
                 <p class="desc">一つ目の冒険、全15ステージを駆け抜けろ</p>
                 <div class="mode-selection">
+                    <p id="progress-info">現在の到達ステージ: -</p>
                     <p>操作モードを選択してください</p>
                     <button class="btn" onclick="startGame('keyboard')">キーボード (矢印キー/WASD)</button>
                     <button class="btn" onclick="startGame('mobile')">モバイル (画面パッド)</button>
+                    <button class="btn secondary" onclick="resetProgress()"
+                        style="margin-top: 10px; font-size: 0.8rem; padding: 8px;">進行状況をリセット</button>
                 </div>
             </div>
         </div>

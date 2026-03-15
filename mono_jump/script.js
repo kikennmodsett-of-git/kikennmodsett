@@ -236,6 +236,9 @@ let canJump = true; // ジャンプボタンの単発押しを管理
 
 // 初期化
 function init() {
+    loadProgress();
+    const infoEl = document.getElementById('progress-info');
+    if (infoEl) infoEl.textContent = `現在の到達ステージ: ${currentStage + 1} / 15`;
     setupStage(currentStage);
     requestAnimationFrame(gameLoop);
 }
@@ -259,12 +262,31 @@ function setupStage(index) {
         }
     }
     document.getElementById('stage-display').textContent = `STAGE: ${currentStage + 1} / 15`;
+    saveProgress();
+}
+
+function saveProgress() {
+    localStorage.setItem('monoJumpProgress', currentStage);
+}
+
+function loadProgress() {
+    const saved = localStorage.getItem('monoJumpProgress');
+    if (saved !== null) {
+        currentStage = parseInt(saved);
+        if (currentStage >= STAGES.length) currentStage = 0;
+    }
+}
+
+function resetProgress() {
+    localStorage.removeItem('monoJumpProgress');
+    currentStage = 0;
+    location.reload();
 }
 
 function startGame(mode) {
     controlMode = mode;
     isGameRunning = true;
-    currentStage = 0;
+    loadProgress();
     startTime = Date.now();
 
     document.getElementById('overlay-screen').classList.add('hidden');
