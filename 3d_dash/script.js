@@ -20,8 +20,8 @@ class Game3D {
         this.playerVelocity = new THREE.Vector3();
         this.canJump = true;
         this.gravity = -0.015;
-        this.moveSpeed = 0.1;
-        this.jumpForce = 0.3;
+        this.moveSpeed = 0.12;
+        this.jumpForce = 0.35;
 
         this.init();
     }
@@ -32,31 +32,57 @@ class Game3D {
         this.renderer.shadowMap.enabled = true;
         this.container.appendChild(this.renderer.domElement);
 
-        this.scene.background = new THREE.Color(0x020205);
-        this.scene.fog = new THREE.Fog(0x020205, 10, 50);
+        this.scene.background = new THREE.Color(0x020210);
+        this.scene.fog = new THREE.Fog(0x020210, 20, 100);
 
         // Lights
-        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        const ambientLight = new THREE.AmbientLight(0x404040, 2.5);
         this.scene.add(ambientLight);
 
-        const directionalLight = new THREE.PointLight(0x00ffff, 5, 100);
-        directionalLight.position.set(10, 20, 10);
-        directionalLight.castShadow = true;
-        this.scene.add(directionalLight);
+        const pointLight = new THREE.PointLight(0x00ffff, 10, 100);
+        pointLight.position.set(10, 20, 10);
+        pointLight.castShadow = true;
+        this.scene.add(pointLight);
 
-        // Create Player
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshStandardMaterial({
+        // --- Create Player (サムネイルのデザインを再現) ---
+        this.player = new THREE.Group();
+
+        // Body (Neon Box)
+        const bodyGeo = new THREE.BoxGeometry(1, 1, 1);
+        const bodyMat = new THREE.MeshStandardMaterial({
             color: 0x00ffff,
             emissive: 0x00ffff,
-            emissiveIntensity: 0.5
+            emissiveIntensity: 0.3
         });
-        this.player = new THREE.Mesh(geometry, material);
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.castShadow = true;
+        this.player.add(body);
+
+        // Eyes (Vibrant white emissive)
+        const eyeGeo = new THREE.PlaneGeometry(0.2, 0.4);
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+        eyeL.position.set(-0.25, 0.1, 0.51);
+        const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+        eyeR.position.set(0.25, 0.1, 0.51);
+        this.player.add(eyeL, eyeR);
+
+        // Horns/Wings (Thunder style from thumbnail)
+        const hornGeo = new THREE.ConeGeometry(0.1, 0.6, 4);
+        const hornMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        const h1 = new THREE.Mesh(hornGeo, hornMat);
+        h1.position.set(-0.5, 0.6, 0);
+        h1.rotation.z = 0.6;
+        const h2 = new THREE.Mesh(hornGeo, hornMat);
+        h2.position.set(0.5, 0.6, 0);
+        h2.rotation.z = -0.6;
+        this.player.add(h1, h2);
+
         this.player.position.set(0, 2, 0);
-        this.player.castShadow = true;
         this.scene.add(this.player);
 
         this.createLevel();
+        this.addDecorations();
 
         window.addEventListener('keydown', (e) => this.keys[e.code] = true);
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
@@ -69,48 +95,116 @@ class Game3D {
         this.animate();
     }
 
-    createLevel() {
-        const platformMaterial = new THREE.MeshStandardMaterial({ color: 0x222244 });
-        const neonMaterial = new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0xff00ff, emissiveIntensity: 1 });
+    addDecorations() {
+        // Floating Crystals (サムネイルの背景)
+        for (let i = 0; i < 30; i++) {
+            const size = Math.random() * 4 + 1;
+            const geo = new THREE.OctahedronGeometry(size, 0);
+            const mat = new THREE.MeshStandardMaterial({
+                color: Math.random() > 0.5 ? 0x00ffff : 0xff00ff,
+                emissive: Math.random() > 0.5 ? 0x00ffff : 0xff00ff,
+                emissiveIntensity: 0.6,
+                transparent: true,
+                opacity: 0.6
+            });
+            const crystal = new THREE.Mesh(geo, mat);
+            crystal.position.set(
+                (Math.random() - 0.5) * 80,
+                (Math.random() - 0.5) * 50,
+                (Math.random() - 0.5) * 120 - 40
+            );
+            crystal.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            this.scene.add(crystal);
+        }
 
-        // Start platform
+        // Void Rings (幻想的な軌道)
+        for (let i = 0; i < 6; i++) {
+            const ringGeo = new THREE.TorusGeometry(20 + i * 8, 0.04, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0x5555ff,
+                transparent: true,
+                opacity: 0.2
+            });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.position.set(0, 0, -40);
+            ring.rotation.x = Math.PI / 2.5;
+            ring.rotation.y = Math.random() * Math.PI;
+            this.scene.add(ring);
+        }
+    }
+
+    createLevel() {
+        // --- Platforms (六角柱の浮遊島スタイル) ---
         this.addPlatform(0, 0, 0, 5, 5);
 
-        // Scattered platforms
         const coords = [
-            [0, 0, -8],
-            [4, 1, -15],
-            [-2, 2, -22],
-            [3, 1, -30],
-            [0, 2, -38],
-            [-4, 3, -45],
-            [0, 2, -55]
+            [0, 0, -10],
+            [5, 1, -20],
+            [-3, 2, -30],
+            [4, 1.5, -42],
+            [0, 3, -55],
+            [-6, 2, -68],
+            [0, 3, -80]
         ];
 
         coords.forEach(pos => {
-            this.addPlatform(pos[0], pos[1], pos[2], 3, 3);
+            this.addPlatform(pos[0], pos[1], pos[2], 3.5, 3.5);
         });
 
-        // Goal platform
-        this.goal = this.addPlatform(0, 3, -65, 6, 6, 0x00ff00);
+        // Goal Platform
+        this.goal = this.addPlatform(0, 4, -95, 8, 8, 0x00ff00);
 
-        // Goal Marker
-        const markerGeo = new THREE.TorusGeometry(2, 0.1, 16, 100);
+        // Goal Marker (サムネイルのような光の輪)
+        const markerGeo = new THREE.TorusGeometry(3, 0.15, 16, 100);
         const markerMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00 });
         const marker = new THREE.Mesh(markerGeo, markerMat);
-        marker.position.set(0, 6, -65);
+        marker.position.set(0, 8, -95);
         this.scene.add(marker);
+
+        const lightMarker = new THREE.PointLight(0x00ff00, 20, 50);
+        lightMarker.position.set(0, 8, -95);
+        this.scene.add(lightMarker);
     }
 
     addPlatform(x, y, z, w, d, color = 0x222244) {
-        const geo = new THREE.BoxGeometry(w, 0.5, d);
-        const mat = new THREE.MeshStandardMaterial({ color: color });
-        const platform = new THREE.Mesh(geo, mat);
-        platform.position.set(x, y, z);
-        platform.receiveShadow = true;
-        this.scene.add(platform);
-        this.platforms.push(platform);
-        return platform;
+        const group = new THREE.Group();
+
+        // Island Top
+        const topGeo = new THREE.CylinderGeometry(w / 1.5, w / 1.5, 0.5, 6);
+        const topMat = new THREE.MeshStandardMaterial({ color: color });
+        const topMesh = new THREE.Mesh(topGeo, topMat);
+        topMesh.receiveShadow = true;
+        group.add(topMesh);
+
+        // Island Bottom (Tapered pillar)
+        const bottomGeo = new THREE.CylinderGeometry(w / 1.5, 0, 3, 6);
+        const bottomMat = new THREE.MeshStandardMaterial({
+            color: 0x111122,
+            transparent: true,
+            opacity: 0.9
+        });
+        const bottomMesh = new THREE.Mesh(bottomGeo, bottomMat);
+        bottomMesh.position.y = -1.75;
+        group.add(bottomMesh);
+
+        // Neon Aura (底部が光る演出)
+        const auraGeo = new THREE.CylinderGeometry(w / 1.5 + 0.3, w / 1.5 + 0.3, 0.1, 6);
+        const auraMat = new THREE.MeshBasicMaterial({
+            color: color === 0x00ff00 ? 0x00ff00 : 0x00ffff,
+            transparent: true,
+            opacity: 0.3
+        });
+        const aura = new THREE.Mesh(auraGeo, auraMat);
+        aura.position.y = -0.3;
+        group.add(aura);
+
+        group.position.set(x, y, z);
+        this.scene.add(group);
+
+        // Interaction Metadata
+        const pData = { x, y, z, w, d };
+        this.platforms.push(pData);
+        return group;
     }
 
     startGame() {
@@ -153,20 +247,17 @@ class Game3D {
         this.playerVelocity.y += this.gravity;
         this.player.position.y += this.playerVelocity.y;
 
-        // Collision detection
+        // Collision detection (浮遊島の座標データに基づき判定)
         let onGround = false;
-        this.platforms.forEach(platform => {
-            const dx = Math.abs(this.player.position.x - platform.position.x);
-            const dz = Math.abs(this.player.position.z - platform.position.z);
+        this.platforms.forEach(p => {
+            const dx = Math.abs(this.player.position.x - p.x);
+            const dz = Math.abs(this.player.position.z - p.z);
             const py = this.player.position.y;
-            const pheight = 0.5; // half cube + half platform
 
-            if (dx < (platform.geometry.parameters.width / 2 + 0.5) &&
-                dz < (platform.geometry.parameters.depth / 2 + 0.5)) {
-
-                if (py > platform.position.y && py < platform.position.y + 1.1) {
+            if (dx < (p.w / 1.25) && dz < (p.d / 1.25)) {
+                if (py > p.y && py < p.y + 1.2) {
                     if (this.playerVelocity.y < 0) {
-                        this.player.position.y = platform.position.y + 0.75;
+                        this.player.position.y = p.y + 0.75;
                         this.playerVelocity.y = 0;
                         this.canJump = true;
                         onGround = true;
@@ -176,21 +267,22 @@ class Game3D {
         });
 
         // Fall check
-        if (this.player.position.y < -10) {
+        if (this.player.position.y < -15) {
             this.gameOver(false);
         }
 
         // Goal check
-        if (this.player.position.z < -62) {
+        if (this.player.position.z < -90) {
             this.gameOver(true);
         }
 
-        // Camera follow
-        this.camera.position.set(
+        // Camera follow (Smooth transition)
+        const targetCamPos = new THREE.Vector3(
             this.player.position.x,
-            this.player.position.y + 5,
-            this.player.position.z + 10
+            this.player.position.y + 6,
+            this.player.position.z + 12
         );
+        this.camera.position.lerp(targetCamPos, 0.1);
         this.camera.lookAt(this.player.position);
     }
 
