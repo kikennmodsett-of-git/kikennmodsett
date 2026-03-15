@@ -24,6 +24,12 @@ class TaikoGame {
         this.noteRadius = 40;
         this.noteSpeed = 400; // pixels per second
 
+        this.judgmentWindows = {
+            good: 0.05, // +-50ms
+            nice: 0.12, // +-120ms
+            bad: 0.20   // +-200ms
+        };
+
         // Difficulty Config
         this.difficulty = 'normal';
         this.diffConfig = {
