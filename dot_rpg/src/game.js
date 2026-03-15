@@ -32,24 +32,42 @@ class Game {
     }
 
     init() {
-        this.ui.log("Pixel Adventure Ver 2.0 へようこそ！");
+        this.ui.log("Pixel Adventure Ver 2.5 へようこそ！");
         this.ui.log("※オートロードは無効です。続きから遊ぶ場合は「ステータス > 設定」からロードしてください。");
-        this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
 
         document.getElementById('btn-status').onclick = () => this.inventory.showMainMenu();
         document.getElementById('btn-quests').onclick = () => this.showQuests();
         document.getElementById('btn-save').onclick = () => this.saveGame('manual');
 
-        // 起動時のオートロードを廃止（手動ロードに変更）
+        // タイトル画面のスタートボタンイベント
+        const startBtn = document.getElementById('btn-start-game');
+        if (startBtn) {
+            startBtn.onclick = () => this.startGame();
+        }
 
         // 初期スキル習得 (ロードしていない場合のみ)
         if (!this.isLoaded) {
             this.player.learnSkill(this.skillDB[0]);
             this.player.learnSkill(this.skillDB[3]);
         }
+    }
+
+    startGame() {
+        // タイトル画面をフェードアウト
+        const titleOverlay = document.getElementById('title-screen-overlay');
+        if (titleOverlay) {
+            titleOverlay.classList.add('fade-out');
+            setTimeout(() => titleOverlay.classList.add('hidden'), 800);
+        }
+
+        // メインUIを表示
+        document.getElementById('game-header').classList.remove('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        document.getElementById('game-menu').classList.remove('hidden');
 
         this.showMainMap();
         this.ui.updateHeader(this.player);
+        this.ui.log("冒険が始まった！ WASDで移動し、世界を探索しましょう。");
     }
 
     showMainMap() {

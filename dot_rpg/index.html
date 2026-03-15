@@ -10,7 +10,18 @@
 
 <body>
     <div id="game-container" class="pixel-art">
-        <header id="game-header">
+        <!-- タイトル画面オーバーレイ -->
+        <div id="title-screen-overlay">
+            <div id="title-logo-container">
+                <img src="assets/title_screen.png" id="title-bg-image" alt="Pixel Adventure Title">
+                <div id="title-start-prompt">
+                    <button id="btn-start-game">冒険を始める [GAME START]</button>
+                    <p id="title-version-info">Ver 2.5 - Epic Anniversary Update</p>
+                </div>
+            </div>
+        </div>
+
+        <header id="game-header" class="hidden">
             <div id="player-summary">
                 <span id="player-name">勇者</span>
                 <span id="player-level">Lv. 1</span>
@@ -22,7 +33,7 @@
             </div>
         </header>
 
-        <main id="game-screen">
+        <main id="game-screen" class="hidden">
             <!-- フィールド、バトル、ショップなどがここに動的に展開される -->
             <div id="world-container" class="hidden">
                 <canvas id="world-map-canvas"></canvas>
@@ -35,7 +46,7 @@
             <div id="action-panel"></div>
         </main>
 
-        <nav id="game-menu">
+        <nav id="game-menu" class="hidden">
             <button id="btn-status">ステータス</button>
             <button id="btn-quests">クエスト</button>
             <button id="btn-save">セーブ</button>
