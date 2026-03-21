@@ -1,5 +1,7 @@
 export const SkillDB = {
+    _cachedSkills: null,
     generateSkills() {
+        if (this._cachedSkills) return this._cachedSkills;
         const skills = [];
         const types = [
             { name: "刻命の剣技", element: "無", category: "物理" },
@@ -58,6 +60,7 @@ export const SkillDB = {
                 buff: typeInfo.buff || null
             });
         }
+        this._cachedSkills = skills;
         return skills;
     },
 

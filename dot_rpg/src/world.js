@@ -380,71 +380,79 @@ export class World {
     }
 
     draw() {
-        const ctx = this.ctx;
-        const ts = this.tileSize;
-        const cw = this.canvas.width;
-        const ch = this.canvas.height;
+        try {
+            const ctx = this.ctx;
+            const ts = this.tileSize;
+            const cw = this.canvas.width;
+            const ch = this.canvas.height;
 
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, cw, ch);
+            if (cw <= 0 || ch <= 0) return;
 
-        ctx.save();
-        ctx.translate(this.cameraX, this.cameraY);
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, cw, ch);
 
-        // 視野内のタイルのみ描画
-        const startX = Math.max(0, Math.floor(-this.cameraX / ts));
-        const endX = Math.min(this.mapSize, Math.ceil((-this.cameraX + cw) / ts));
-        const startY = Math.max(0, Math.floor(-this.cameraY / ts));
-        const endY = Math.min(this.mapSize, Math.ceil((-this.cameraY + ch) / ts));
+            ctx.save();
+            ctx.translate(this.cameraX, this.cameraY);
 
-        const colors = {
-            grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
-            town: "#a67c52", dungeon: "#331133", snow: "#e0f0ff", desert: "#e6be8a", volcano: "#5a1e1e",
-            jungle: "#034d03"
-        };
+            // 視野内のタイルのみ描画
+            const startX = Math.max(0, Math.floor(-this.cameraX / ts));
+            const endX = Math.min(this.mapSize, Math.ceil((-this.cameraX + cw) / ts));
+            const startY = Math.max(0, Math.floor(-this.cameraY / ts));
+            const endY = Math.min(this.mapSize, Math.ceil((-this.cameraY + ch) / ts));
 
-        for (let y = startY; y < endY; y++) {
-            for (let x = startX; x < endX; x++) {
-                const type = this.mapData[y][x];
-                ctx.fillStyle = colors[type];
-                ctx.fillRect(x * ts, y * ts, ts, ts);
+            // 色定義をループ外で参照するように固定（負荷軽減）
+            if (!this._tileColors) {
+                this._tileColors = {
+                    grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
+                    town: "#a67c52", dungeon: "#331133", snow: "#e0f0ff", desert: "#e6be8a", volcano: "#5a1e1e",
+                    jungle: "#034d03"
+                };
+            }
 
-                // 装飾
-                if (type === 'forest') {
-                    ctx.fillStyle = "#142b0d";
-                    ctx.beginPath();
-                    ctx.moveTo(x * ts + ts / 2, y * ts + 5);
-                    ctx.lineTo(x * ts + 5, y * ts + ts - 5);
-                    ctx.lineTo(x * ts + ts - 5, y * ts + ts - 5);
-                    ctx.fill();
-                } else if (type === 'town') {
-                    ctx.fillStyle = "#8d6e63"; // 屋根色
-                    ctx.beginPath();
-                    ctx.moveTo(x * ts + 5, y * ts + ts - 5);
-                    ctx.lineTo(x * ts + ts / 2, y * ts + 5);
-                    ctx.lineTo(x * ts + ts - 5, y * ts + ts - 5);
-                    ctx.fill();
-                    ctx.strokeStyle = "#fff";
-                    ctx.strokeRect(x * ts + 4, y * ts + 4, ts - 8, ts - 8);
-                } else if (type === 'jungle') {
-                    // 木のような装飾
-                    ctx.fillStyle = "#0c2b0d";
-                    ctx.fillRect(x * ts + ts / 3, y * ts + ts / 2, ts / 3, ts / 2);
-                    ctx.beginPath();
-                    ctx.arc(x * ts + ts / 2, y * ts + ts / 3, ts / 3, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (type === 'dungeon') {
-                    ctx.strokeStyle = "#ff00ff";
-                    ctx.beginPath();
-                    ctx.moveTo(x * ts + ts / 2, y * ts + 2);
-                    ctx.lineTo(x * ts + ts - 2, y * ts + ts - 2);
-                    ctx.lineTo(x * ts + 2, y * ts + ts - 2);
-                    ctx.closePath();
-                    ctx.stroke();
+            for (let y = startY; y < endY; y++) {
+                for (let x = startX; x < endX; x++) {
+                    const type = this.mapData[y][x];
+                    ctx.fillStyle = this._tileColors[type] || "#000";
+                    ctx.fillRect(x * ts, y * ts, ts, ts);
+
+                    // 装飾
+                    if (type === 'forest') {
+                        ctx.fillStyle = "#142b0d";
+                        ctx.beginPath();
+                        ctx.moveTo(x * ts + ts / 2, y * ts + 5);
+                        ctx.lineTo(x * ts + 5, y * ts + ts - 5);
+                        ctx.lineTo(x * ts + ts - 5, y * ts + ts - 5);
+                        ctx.fill();
+                    } else if (type === 'town') {
+                        ctx.fillStyle = "#8d6e63"; // 屋根色
+                        ctx.beginPath();
+                        ctx.moveTo(x * ts + 5, y * ts + ts - 5);
+                        ctx.lineTo(x * ts + ts / 2, y * ts + 5);
+                        ctx.lineTo(x * ts + ts - 5, y * ts + ts - 5);
+                        ctx.fill();
+                        ctx.strokeStyle = "#fff";
+                        ctx.strokeRect(x * ts + 4, y * ts + 4, ts - 8, ts - 8);
+                    } else if (type === 'jungle') {
+                        ctx.fillStyle = "#0c2b0d";
+                        ctx.fillRect(x * ts + ts / 3, y * ts + ts / 2, ts / 3, ts / 2);
+                        ctx.beginPath();
+                        ctx.arc(x * ts + ts / 2, y * ts + ts / 3, ts / 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (type === 'dungeon') {
+                        ctx.strokeStyle = "#ff00ff";
+                        ctx.beginPath();
+                        ctx.moveTo(x * ts + ts / 2, y * ts + 2);
+                        ctx.lineTo(x * ts + ts - 2, y * ts + ts - 2);
+                        ctx.lineTo(x * ts + 2, y * ts + ts - 2);
+                        ctx.closePath();
+                        ctx.stroke();
+                    }
                 }
             }
+            ctx.restore();
+        } catch (e) {
+            console.error("Draw loop error:", e);
         }
-        ctx.restore();
     }
 
     checkLocation() {
@@ -514,6 +522,7 @@ export class World {
 
     show() {
         this.container.classList.remove('hidden');
+        this.isMoving = false; // 復帰時に移動状態を強制リセット
         if (this.game.player.controlMode === "mobile") {
             this.showMobilePad();
         }
