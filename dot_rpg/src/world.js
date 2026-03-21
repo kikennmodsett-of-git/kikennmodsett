@@ -5,12 +5,12 @@ export class World {
         this.seed = seed || Math.random();
         this.container = document.getElementById('world-container');
         this.canvas = document.getElementById('world-map-canvas');
-        this.ctx = this.canvas.getContext('2d', { alpha: false });
+        this.ctx = this.canvas.getContext('2d', { alpha: false, willReadFrequently: true });
         this.playerSprite = document.getElementById('player-sprite');
         this.coordElement = document.getElementById('player-coords');
 
         this.minimapCanvas = document.getElementById('minimap-canvas');
-        this.minimapCtx = this.minimapCanvas.getContext('2d');
+        this.minimapCtx = this.minimapCanvas.getContext('2d', { willReadFrequently: true });
 
         this.tileSize = 32;
         this.mapSize = 1000; // 1000x1000 (100万タイル)
