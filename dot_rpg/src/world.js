@@ -392,7 +392,8 @@ export class World {
 
         const colors = {
             grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
-            town: "#a67c52", dungeon: "#331133", snow: "#e0f0ff", desert: "#e6be8a", volcano: "#5a1e1e"
+            town: "#a67c52", dungeon: "#331133", snow: "#e0f0ff", desert: "#e6be8a", volcano: "#5a1e1e",
+            jungle: "#034d03"
         };
 
         for (let y = startY; y < endY; y++) {

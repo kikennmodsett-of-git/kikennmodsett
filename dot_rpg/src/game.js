@@ -49,6 +49,16 @@ class Game {
         };
 
         this.ui.log("Pixel Adventure Ver 3.0 (Island Update) へようこそ！");
+
+        // アイランドアップデート初回のみ位置を中央に強制リセット (NEW)
+        if (!localStorage.getItem('pixel_adventure_v3_reset')) {
+            this.world.playerX = 500;
+            this.world.playerY = 500;
+            localStorage.setItem('pixel_adventure_v3_reset', 'true');
+            this.ui.log("【システム】マップ刷新に伴い、始まりの村へ転置しました。");
+            this.saveGame('auto');
+        }
+
         if (!this.isLoaded) {
             this.ui.log("島の中央「始まりの村」から冒険が始まります。WASDで探索しましょう。");
             this.world.playerX = 500;
