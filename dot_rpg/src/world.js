@@ -155,7 +155,8 @@ export class World {
             const type = this.mapData[this.playerY][this.playerX];
             const names = {
                 grass: "平原", forest: "森", water: "水辺", mountain: "岩山",
-                town: "街・村", dungeon: "ダンジョン", snow: "雪原", desert: "砂漠", volcano: "火山地帯"
+                town: "街・村", dungeon: "ダンジョン", snow: "雪原", desert: "砂漠", volcano: "火山地帯",
+                jungle: "ジャングル"
             };
             const typeName = names[type] || "未知の地点";
             document.getElementById('full-map-coords').textContent = `${typeName} (${this.playerX}, ${this.playerY})`;
@@ -183,7 +184,8 @@ export class World {
         // ミニマップと同じ配色を使用
         const colors = {
             grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
-            town: "#ff0", dungeon: "#f0f", snow: "#fff", desert: "#e6be8a", volcano: "#a00"
+            town: "#ff0", dungeon: "#f0f", snow: "#fff", desert: "#e6be8a", volcano: "#a00",
+            jungle: "#0a3d0a"
         };
 
         for (let y = 0; y < size; y++) {
@@ -311,14 +313,15 @@ export class World {
 
         const colors = {
             grass: "#2d5a27", forest: "#1a3311", water: "#1e3c5a", mountain: "#4a4a4a",
-            town: "#ff0", dungeon: "#f0f", snow: "#fff", desert: "#e6be8a", volcano: "#a00"
+            town: "#ff0", dungeon: "#f0f", snow: "#fff", desert: "#e6be8a", volcano: "#a00",
+            jungle: "#0a3d0a"
         };
 
         const img = ctx.createImageData(w, h);
         for (let y = 0; y < h; y++) {
             for (let x = 0; x < w; x++) {
                 const type = this.mapData[y][x];
-                const colorStr = colors[type];
+                const colorStr = colors[type] || "#000";
                 // 簡易色変換 (3桁・6桁hex対応)
                 let r, g, b;
                 if (colorStr.length === 4) {
