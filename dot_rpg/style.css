@@ -314,7 +314,7 @@ button:active {
     width: 28px;
     height: 32px;
     z-index: 10;
-    transition: left 0.12s linear, top 0.12s linear;
+    /* transition を削除: マップスクロールと完全に一律で動かすため */
 }
 
 .hero-visual {

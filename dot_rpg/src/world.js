@@ -289,11 +289,11 @@ export class World {
     }
 
     updateView() {
-        const containerWidth = this.container.offsetWidth || 800; // フォールバック
+        const containerWidth = this.container.offsetWidth || 800;
         const containerHeight = this.container.offsetHeight || 300;
 
-        // キャンバスサイズが確定していない場合に更新
-        if (this.canvas.width <= 0) {
+        // キャンバスサイズを現在のコンテナサイズに合わせて物理的に更新
+        if (this.canvas.width !== containerWidth || this.canvas.height !== containerHeight) {
             this.canvas.width = containerWidth;
             this.canvas.height = containerHeight;
         }
@@ -301,8 +301,9 @@ export class World {
         this.pTargetLeft = this.playerX * this.tileSize;
         this.pTargetTop = this.playerY * this.tileSize;
 
-        this.cameraX = (containerWidth / 2) - this.pTargetLeft - (this.tileSize / 2);
-        this.cameraY = (containerHeight / 2) - this.pTargetTop - (this.tileSize / 2);
+        // カメラ座標は四捨五入してサブピクセルのによるボケを防止
+        this.cameraX = Math.round((containerWidth / 2) - this.pTargetLeft - (this.tileSize / 2));
+        this.cameraY = Math.round((containerHeight / 2) - this.pTargetTop - (this.tileSize / 2));
 
         this.playerSprite.style.left = `${this.pTargetLeft}px`;
         this.playerSprite.style.top = `${this.pTargetTop}px`;
