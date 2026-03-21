@@ -505,7 +505,7 @@ export class Battle {
         window.game.isBattleActive = false; // 移動フラグを即座に解放
         this.player.temporaryBuffs = null;
         this.ui.clearActionPanel();
-        this.ui.hideBattleArena();
+        window.game.world.show(); // ui.hideBattleArena() の代わりに show() を呼んで描画ループを即座に再点火
         this.ui.addAction("探索に戻る", () => window.game.showMainMap());
     }
 }
