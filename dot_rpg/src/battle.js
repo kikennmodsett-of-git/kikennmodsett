@@ -39,17 +39,14 @@ export class Battle {
         this.ui.addAction("逃げる", () => this.executeEscape());
     }
 
-    showSkillSelection(category = 'all') {
+    showSkillSelection(category = 'attack') {
         this.currentSkillCategory = category;
         this.ui.clearActionPanel();
 
-        // カテゴリータブの表示
+        // カテゴリータブの表示 (2つに集約)
         const categories = [
-            { id: 'all', name: "全て" },
             { id: 'attack', name: "攻撃" },
-            { id: 'heal', name: "回復" },
-            { id: 'buff', name: "補助" },
-            { id: 'debuff', name: "弱体" }
+            { id: 'heal', name: "回復・補助" }
         ];
 
         // タブボタンの作成
@@ -59,15 +56,18 @@ export class Battle {
             this.ui.addAction(cat.name, () => this.showSkillSelection(cat.id), style);
         });
 
-        // スキルの抽出とフィルタリング
+        // スキルの抽出とフィルタリング (2大分類)
         const allActiveSkills = [...this.player.skills, ...this.player.fusedSkills].filter(s => !s.isPassive);
 
         const filteredSkills = allActiveSkills.filter(s => {
-            if (this.currentSkillCategory === 'all') return true;
-            if (this.currentSkillCategory === 'attack') return (s.category === '物理' || s.category === '魔法') && !s.healing;
-            if (this.currentSkillCategory === 'heal') return s.healing || s.category === '神聖';
-            if (this.currentSkillCategory === 'buff') return s.category === '補助';
-            if (this.currentSkillCategory === 'debuff') return s.category === '弱体';
+            if (this.currentSkillCategory === 'attack') {
+                // 攻撃系: 物理、魔法、弱体、かつ回復でない
+                return (s.category === '物理' || s.category === '魔法' || s.category === '弱体') && !s.healing;
+            }
+            if (this.currentSkillCategory === 'heal') {
+                // 回復・補助系: 回復、神聖、補助
+                return s.healing || s.category === '神聖' || s.category === '補助';
+            }
             return true;
         });
 
