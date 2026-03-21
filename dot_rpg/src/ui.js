@@ -15,7 +15,16 @@ export class UI {
 
     log(message) {
         const div = document.createElement('div');
-        div.innerHTML = `> ${message}`;
+        div.className = 'log-item';
+
+        // メッセージの種類を自動判別
+        if (message.includes('【システム】')) div.classList.add('log-system');
+        else if (message.includes('【戦闘】') || message.includes('ダメージ') || message.includes('回避')) div.classList.add('log-battle');
+        else if (message.includes('【報酬】') || message.includes('経験値') || message.includes('ゴールド') || message.includes('手に入れた')) div.classList.add('log-reward');
+        else if (message.includes('【クエスト】') || message.includes('依頼')) div.classList.add('log-quest');
+        else if (message.includes('レベルアップ')) div.classList.add('log-lvlup');
+
+        div.innerHTML = `<span class="log-arrow">></span> ${message}`;
         this.msgLog.prepend(div);
     }
 
