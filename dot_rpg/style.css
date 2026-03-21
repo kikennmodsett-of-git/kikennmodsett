@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+
 :root {
     --bg-color: #0d0d1a;
     --text-color: #e0e0ff;
@@ -14,8 +16,6 @@
     font-size: 12px;
     margin-left: 10px;
 }
-
-@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
 
 * {
     box-sizing: border-box;
