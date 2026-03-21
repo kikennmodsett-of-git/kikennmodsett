@@ -88,22 +88,31 @@ class Game {
         this.saveGame('auto');
 
         const type = this.world.mapData[this.world.playerY][this.world.playerX];
+        const dist = Math.sqrt(Math.pow(this.world.playerX - 500, 2) + Math.pow(this.world.playerY - 500, 2));
 
-        // バイオームごとのレベル帯定義
-        const levelRanges = {
-            volcano: { min: 1200, max: 1500 },
-            desert: { min: 900, max: 1200 },
-            snow: { min: 600, max: 900 },
-            jungle: { min: 300, max: 600 },
-            grass: { min: 1, max: 300 },
-            forest: { min: 50, max: 400 },
-            mountain: { min: 200, max: 800 }
-        };
+        let level = 1;
 
-        const range = levelRanges[type] || { min: 1, max: 100 };
-        const level = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+        if (dist < 30) {
+            // 最初の村付近はレベル1固定
+            level = 1;
+        } else {
+            // バイオームごとのレベル帯定義
+            const levelRanges = {
+                grass: { min: 1, max: 20 },
+                jungle: { min: 21, max: 50 },
+                snow: { min: 51, max: 150 },
+                desert: { min: 151, max: 500 },
+                volcano: { min: 501, max: 1500 },
+                forest: { min: 5, max: 30 },
+                mountain: { min: 30, max: 600 }
+            };
 
-        const candidates = this.allMonsters.filter(m => m.level >= level - 5 && m.level <= level + 5 && !m.isBoss);
+            const range = levelRanges[type] || { min: 1, max: 20 };
+            level = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+        }
+
+        // 近いレベルのモンスターを抽出
+        const candidates = this.allMonsters.filter(m => m.level >= level - 10 && m.level <= level + 2 && !m.isBoss);
         const monster = candidates.length > 0
             ? JSON.parse(JSON.stringify(candidates[Math.floor(Math.random() * candidates.length)]))
             : JSON.parse(JSON.stringify(this.allMonsters[Math.min(level - 1, this.allMonsters.length - 1)]));
