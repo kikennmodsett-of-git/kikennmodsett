@@ -266,27 +266,24 @@ export class World {
     move(dx, dy) {
         if (dx === 0 && dy === 0) return;
         if (this.game.isBattleActive) {
-            this.game.ui.log("【システム】戦闘中は移動できません。");
+            this.ui.log("【システム】戦闘中は移動できません。");
             return;
         }
-        if (this.isMoving) {
-            // this.game.ui.log("【システム】移動中です。"); // 連続入力時のログはうるさいのでコメントアウト
-            return;
-        }
+        if (this.isMoving) return;
 
         const nextX = this.playerX + dx;
         const nextY = this.playerY + dy;
 
         // 範囲外チェック
         if (nextX < 0 || nextX >= this.mapSize || nextY < 0 || nextY >= this.mapSize) {
-            this.game.ui.log("【システム】世界の果てには行けません。");
+            this.ui.log("【システム】世界の果てには行けません。");
             return;
         }
 
         const tile = this.mapData[nextY][nextX];
         if (tile === 'water' || tile === 'mountain') {
-            const msg = tile === 'water' ? "【システム】海を渡る手段がありません。" : "【システム】険しい山は越えられません。";
-            this.game.ui.log(msg);
+            const msg = (tile === 'water') ? "【システム】海を渡る手段がありません。" : "【システム】険しい山は越えられません。";
+            this.ui.log(msg);
             return;
         }
 
@@ -307,12 +304,12 @@ export class World {
                     this.handleMovement();
                 } catch (e) {
                     console.error("Movement follow-up failed:", e);
-                    this.isMoving = false; // エラー時も移動ロックを解除
+                    this.isMoving = false;
                 }
             }, 120);
         } catch (e) {
             console.error("View update failed:", e);
-            this.isMoving = false; // エラー時も移動ロックを解除
+            this.isMoving = false;
         }
     }
 
