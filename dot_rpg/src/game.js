@@ -600,49 +600,64 @@ class Game {
 
         let rarity1 = s1.rarity || 1;
         let newRarity = rarity1;
+        const isS1Extreme = s1.isExtreme || false;
+        const isS2Extreme = (s2.type === 'material' && s2.materialData.isRare) || (s2.isExtreme || false);
 
         if (s2.type === 'material') {
             const m = s2.materialData;
-            // 素材による強化
-            const matLevelBonus = Math.floor(m.level * 1.5);
-            if (isWeapon) {
-                newItem.atk += matLevelBonus;
-                newItem.name = `${s1.name}+`;
-            } else {
-                for (let s in newItem.stats) {
-                    newItem.stats[s] += Math.floor(m.level / 2);
-                }
-                newItem.name = `${s1.name}+`;
-            }
-
-            // レアドロップ素材（☆が2つ以上保証）
             if (m.isRare) {
-                newRarity = Math.max(newRarity + 1, 2);
-                this.ui.log(`<span style="color:#ffff00; font-weight:bold;">レアドロップ素材により、装備が真の力を解放した！</span>`);
-                if (isWeapon) newItem.atk = Math.floor(newItem.atk * 1.5);
-                else {
-                    for (let s in newItem.stats) newItem.stats[s] = Math.floor(newItem.stats[s] * 1.5);
+                // 【圧倒的な差】レアドロップ素材による強化 (5.0倍)
+                const factor = 5.0;
+                if (isWeapon) {
+                    newItem.atk = Math.floor((newItem.atk + m.level * 2) * factor);
+                    newItem.name = `[神極]${s1.name.replace("[神極]", "").replace("+", "")}`;
+                } else {
+                    for (let s in newItem.stats) {
+                        newItem.stats[s] = Math.floor((newItem.stats[s] + m.level) * factor);
+                    }
+                    newItem.name = `[神極]${s1.name.replace("[神極]", "").replace("+", "")}`;
                 }
+                newItem.isExtreme = true;
+                newRarity = Math.max(newRarity + 2, 4); // ☆4以上保証
+                this.ui.log(`<span style="color:#ffff00; font-weight:bold; font-size:14px;">レアドロップ素材が真の力を超絶解放させた！「神極」装備の誕生！</span>`);
             } else {
+                // 通常素材による強化
+                const matLevelBonus = Math.floor(m.level * 1.2);
+                const factor = isS1Extreme ? 1.2 : 1.0; // 極限状態ならベース能力が高いので補正は控えめ
+                if (isWeapon) {
+                    newItem.atk = Math.floor((newItem.atk + matLevelBonus) * factor);
+                    newItem.name = `${s1.name}+`;
+                } else {
+                    for (let s in newItem.stats) {
+                        newItem.stats[s] = Math.floor((newItem.stats[s] + Math.floor(m.level / 2)) * factor);
+                    }
+                    newItem.name = `${s1.name}+`;
+                }
                 if (Math.random() < 0.2) newRarity++;
+                if (isS1Extreme) newItem.isExtreme = true;
             }
         } else {
-            // 装備同士の合成 (元々のロジック)
+            // 装備同士の合成
             const rarity2 = s2.rarity || 1;
             newRarity = Math.max(rarity1, rarity2);
             const upChance = rarity1 === rarity2 ? 0.5 : 0.2;
             if (Math.random() < upChance) newRarity++;
 
-            const boost = 1.2;
+            // どちらかがExtremeならその性能を引き継ぐ
+            const anyExtreme = isS1Extreme || isS2Extreme;
+            const boost = (isS1Extreme && isS2Extreme) ? 1.5 : (anyExtreme ? 1.25 : 1.2);
+
             if (isWeapon) {
                 newItem.atk = Math.floor(((s1.atk || 0) + (s2.atk || 0)) / 2 * boost);
-                newItem.name = `真・${s1.name.replace("真・", "")}`;
+                newItem.name = anyExtreme ? `[神極]${s1.name.replace("[神極]", "").replace("真・", "")}` : `真・${s1.name.replace("真・", "")}`;
             } else {
                 for (let s in newItem.stats) {
                     newItem.stats[s] = Math.floor(((s1.stats[s] || 0) + (s2.stats[s] || 0)) / 2 * boost);
                 }
-                newItem.name = isAccessory ? `極・${s1.name.replace("極・", "")}` : `硬・${s1.name.replace("硬・", "")}`;
+                const prefix = anyExtreme ? "[神極]" : (isAccessory ? "極・" : "硬・");
+                newItem.name = `${prefix}${s1.name.replace("[神極]", "").replace("極・", "").replace("硬・", "")}`;
             }
+            if (anyExtreme) newItem.isExtreme = true;
 
             // 属性の合成
             if (s1.element === "無" || !s1.element) newItem.element = s2.element || "無";

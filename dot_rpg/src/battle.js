@@ -349,24 +349,26 @@ export class Battle {
             this.ui.log("レベルアップ！ ステータスポイントを5獲得しました。");
         }
 
-        // スキル習得判定 (20%の確率でスキルをリサーチ)
-        if (Math.random() < 0.20) {
-            const roll = Math.random() * 20; // 0.00 〜 20.00
+        // スキル習得判定 (計20%の内訳: Mythic 0.15%, Legend 0.85%, Epic 1%, Rare 3%, Uncommon 5%, Common 10%)
+        const skillRoll = Math.random();
+        if (skillRoll < 0.20) {
             let rarityIdx = 0; // 0:Common, 1:Uncommon, 2:Rare, 3:Epic, 4:Legendary, 5:Mythic
 
-            if (roll < 0.15) rarityIdx = 5; // Mythic (0.15%)
-            else if (roll < 1.0) rarityIdx = 4; // Legendary (0.85%)
-            else if (roll < 2.0) rarityIdx = 3; // Epic (1.0%)
-            else if (roll < 5.0) rarityIdx = 2; // Rare (3.0%)
-            else if (roll < 10.0) rarityIdx = 1; // Uncommon (5.0%)
-            else rarityIdx = 0; // Common (10.0%)
+            // 0.20 の内訳を判定 (0.20を100%とした時の相対値ではなく、0.0〜1.0の絶対値で判定)
+            if (skillRoll < 0.0015) rarityIdx = 5; // Mythic (0.15%)
+            else if (skillRoll < 0.01) rarityIdx = 4; // Legendary (0.85% = 0.01 - 0.0015)
+            else if (skillRoll < 0.02) rarityIdx = 3; // Epic (1.0% = 0.02 - 0.01)
+            else if (skillRoll < 0.05) rarityIdx = 2; // Rare (3.0% = 0.05 - 0.02)
+            else if (skillRoll < 0.10) rarityIdx = 1; // Uncommon (5.0% = 0.10 - 0.05)
+            else rarityIdx = 0; // Common (10.0% = 0.20 - 0.10)
 
             const skillCandidates = SkillDB.generateSkills().filter(s => s.rarity === SkillDB.getRarityName(rarityIdx));
             if (skillCandidates.length > 0) {
                 const newSkill = skillCandidates[Math.floor(Math.random() * skillCandidates.length)];
                 if (!this.player.skills.some(s => s.id === newSkill.id)) {
                     this.player.skills.push(newSkill);
-                    this.ui.log(`<span style="color: ${newSkill.rarityColor}; font-weight: bold;">[スキル習得] ${newSkill.name} を手に入れた！</span>`);
+                    const color = SkillDB.getRarityColor ? SkillDB.getRarityColor(rarityIdx) : newSkill.rarityColor;
+                    this.ui.log(`<span style="color: ${color}; font-weight: bold;">[スキル習得] ${newSkill.name} を手に入れた！</span>`);
                 }
             }
         }
