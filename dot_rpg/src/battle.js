@@ -316,6 +316,8 @@ export class Battle {
     }
 
     win() {
+        this.isFinished = true; // 即座に終了フラグを立てる (モンスターの死後の一撃を防止)
+
         // モンスター撃破エフェクト
         const monsterGraphic = document.getElementById('monster-graphic-large');
         if (monsterGraphic) {
@@ -324,7 +326,6 @@ export class Battle {
 
         // エフェクト終了を待ってからリザルト表示
         setTimeout(() => {
-            if (this.isFinished) return;
             this.executeWinSequence();
         }, 800);
     }
@@ -501,6 +502,7 @@ export class Battle {
     endBattle(customMsg) {
         if (customMsg) this.ui.log(customMsg);
         this.isFinished = true;
+        window.game.isBattleActive = false; // 移動フラグを即座に解放
         this.player.temporaryBuffs = null;
         this.ui.clearActionPanel();
         this.ui.hideBattleArena();
