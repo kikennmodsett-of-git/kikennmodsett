@@ -99,10 +99,13 @@ export class World {
                 } else {
                     // 島（中心からの距離）判定
                     const dist = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
-                    // 縁の部分に少しノイズ（ランダム性）を加える
-                    const noise = seededRandom() * 20;
 
-                    if (dist > radius + noise) {
+                    // 角度に基づいて半径を変化させ、歪な形状にする
+                    const angle = Math.atan2(y - centerY, x - centerX);
+                    const variance = Math.sin(angle * 6) * 60 + Math.cos(angle * 4) * 30 + Math.sin(angle * 13) * 15;
+                    const irregularRadius = radius + variance;
+
+                    if (dist > irregularRadius) {
                         type = 'water';
                     } else if (dist < 80) { // 中央平原
                         type = 'grass';
@@ -258,8 +261,9 @@ export class World {
         // 境界チェック
         if (nextX < 0 || nextX >= this.mapSize || nextY < 0 || nextY >= this.mapSize) return;
 
-        // 山などの通行不可判定（簡易）
-        if (this.mapData[nextY][nextX] === 'mountain') return;
+        // 通行不可判定 (山・海)
+        const targetTile = this.mapData[nextY][nextX];
+        if (targetTile === 'mountain' || targetTile === 'water') return;
 
         this.playerX = nextX;
         this.playerY = nextY;
