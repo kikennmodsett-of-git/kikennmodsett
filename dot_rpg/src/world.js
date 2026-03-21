@@ -245,6 +245,11 @@ export class World {
     handleMovement() {
         if (this.game.isBattleActive || this.isMoving) return;
 
+        // 入力フォーカスを確実に窓へ向ける（モーダル閉じ後などの対策）
+        if (document.activeElement && document.activeElement.tagName === 'BODY') {
+            // bodyがフォーカスされていればOK
+        }
+
         let dx = 0;
         let dy = 0;
 
@@ -259,37 +264,56 @@ export class World {
     }
 
     move(dx, dy) {
+        if (dx === 0 && dy === 0) return;
+        if (this.game.isBattleActive) {
+            this.game.ui.log("【システム】戦闘中は移動できません。");
+            return;
+        }
+        if (this.isMoving) {
+            // this.game.ui.log("【システム】移動中です。"); // 連続入力時のログはうるさいのでコメントアウト
+            return;
+        }
+
         const nextX = this.playerX + dx;
         const nextY = this.playerY + dy;
 
-        // 境界チェック
-        if (nextX < 0 || nextX >= this.mapSize || nextY < 0 || nextY >= this.mapSize) return;
+        // 範囲外チェック
+        if (nextX < 0 || nextX >= this.mapSize || nextY < 0 || nextY >= this.mapSize) {
+            this.game.ui.log("【システム】世界の果てには行けません。");
+            return;
+        }
 
-        // 通行不可判定 (山・海)
-        const targetTile = this.mapData[nextY][nextX];
-        if (targetTile === 'mountain' || targetTile === 'water') return;
+        const tile = this.mapData[nextY][nextX];
+        if (tile === 'water' || tile === 'mountain') {
+            const msg = tile === 'water' ? "【システム】海を渡る手段がありません。" : "【システム】険しい山は越えられません。";
+            this.game.ui.log(msg);
+            return;
+        }
 
         this.playerX = nextX;
         this.playerY = nextY;
         this.isMoving = true;
 
-        this.updateView();
+        try {
+            this.updateView();
 
-        // 移動アニメーション後にエンカウント判定
-        setTimeout(() => {
-            try {
-                this.isMoving = false;
-                this.checkLocation();
-                this.checkEncounter();
-                // 押しっぱなしによる連続移動の再開
-                if (!this.game.isBattleActive) {
+            // 移動アニメーション（120ms）後に各種判定を実行
+            setTimeout(() => {
+                try {
+                    this.isMoving = false;
+                    this.checkLocation();
+                    this.checkEncounter();
+                    // キー入力継続中の場合は次の一歩へ
                     this.handleMovement();
+                } catch (e) {
+                    console.error("Movement follow-up failed:", e);
+                    this.isMoving = false; // エラー時も移動ロックを解除
                 }
-            } catch (e) {
-                console.error("Movement follow-up failed:", e);
-                this.isMoving = false; // エラー時も確実にフラグを折る
-            }
-        }, 120);
+            }, 120);
+        } catch (e) {
+            console.error("View update failed:", e);
+            this.isMoving = false; // エラー時も移動ロックを解除
+        }
     }
 
     updateView() {
