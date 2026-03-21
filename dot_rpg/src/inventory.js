@@ -240,18 +240,50 @@ export class Inventory {
         this.ui.updateHeader(p);
     }
 
-    showSkills() {
-        let html = `<h3>スキル・魔法一覧 (全${this.player.skills.length + this.player.fusedSkills.length}種)</h3>`;
-        html += '<p style="font-size:10px; color:#aaa;">※パッシブスキルは自動で効果を発揮します</p>';
+    showSkills(category = 'all') {
+        let html = `<h3>スキル・魔法一覧</h3>`;
+        html += '<p style="font-size:10px; color:#aaa; margin-bottom:10px;">※パッシブスキルは自動で効果を発揮します</p>';
+
+        // カテゴリータブ
+        const categories = [
+            { id: 'all', name: "全て" },
+            { id: 'attack', name: "攻撃" },
+            { id: 'heal', name: "回復" },
+            { id: 'buff', name: "補助" },
+            { id: 'debuff', name: "弱体" },
+            { id: 'passive', name: "パッシブ" }
+        ];
+
+        html += `<div class="inv-tabs" style="margin-bottom:10px;">`;
+        categories.forEach(cat => {
+            const isActive = category === cat.id;
+            html += `<button onclick="game.inventory.showSkills('${cat.id}')" ${isActive ? 'style="background:var(--accent-color)"' : ''}>${cat.name}</button> `;
+        });
+        html += `</div>`;
+
         html += '<div class="skill-grid">';
 
         const allSkills = [...this.player.skills, ...this.player.fusedSkills];
-        if (allSkills.length === 0) {
-            html += "<p>まだスキルを習得していません。</p>";
+
+        const filteredSkills = allSkills.filter(s => {
+            if (category === 'all') return true;
+            if (category === 'passive') return s.isPassive;
+            if (s.isPassive) return false; // 以下、アクティブスキルの分類
+            if (category === 'attack') return (s.category === '物理' || s.category === '魔法') && !s.healing;
+            if (category === 'heal') return s.healing || s.category === '神聖';
+            if (category === 'buff') return s.category === '補助';
+            if (category === 'debuff') return s.category === '弱体';
+            return true;
+        });
+
+        if (filteredSkills.length === 0) {
+            html += "<p>該当するスキルがありません。</p>";
         } else {
-            allSkills.forEach((s, idx) => {
+            filteredSkills.forEach((s) => {
+                // allSkills内での実際のインデックスを取得 (詳細画面用)
+                const realIdx = allSkills.indexOf(s);
                 const typeLabel = s.isPassive ? "パッシブ" : "アクティブ";
-                html += `<div class="skill-item ${s.isPassive ? 'passive' : ''} skill-element-${s.element}" onclick="game.inventory.showSkillDetail(${idx})">
+                html += `<div class="skill-item ${s.isPassive ? 'passive' : ''} skill-element-${s.element}" onclick="game.inventory.showSkillDetail(${realIdx})">
                     <strong>${s.name}</strong><br>
                     <small>${s.element}属性 / ${typeLabel}</small>
                 </div>`;

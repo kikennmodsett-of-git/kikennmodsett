@@ -39,21 +39,46 @@ export class Battle {
         this.ui.addAction("逃げる", () => this.executeEscape());
     }
 
-    showSkillSelection() {
+    showSkillSelection(category = 'all') {
+        this.currentSkillCategory = category;
         this.ui.clearActionPanel();
-        const allSkills = [...this.player.skills, ...this.player.fusedSkills].filter(s => !s.isPassive);
 
-        if (allSkills.length === 0) {
-            this.ui.log("使えるアクティブスキルがない！");
-            this.playerTurn();
-            return;
+        // カテゴリータブの表示
+        const categories = [
+            { id: 'all', name: "全て" },
+            { id: 'attack', name: "攻撃" },
+            { id: 'heal', name: "回復" },
+            { id: 'buff', name: "補助" },
+            { id: 'debuff', name: "弱体" }
+        ];
+
+        // タブボタンの作成
+        categories.forEach(cat => {
+            const isActive = this.currentSkillCategory === cat.id;
+            const style = isActive ? "background: var(--accent-color); border: 1px solid #fff; font-weight: bold;" : "opacity: 0.8; font-size: 10px;";
+            this.ui.addAction(cat.name, () => this.showSkillSelection(cat.id), style);
+        });
+
+        // スキルの抽出とフィルタリング
+        const allActiveSkills = [...this.player.skills, ...this.player.fusedSkills].filter(s => !s.isPassive);
+
+        const filteredSkills = allActiveSkills.filter(s => {
+            if (this.currentSkillCategory === 'all') return true;
+            if (this.currentSkillCategory === 'attack') return (s.category === '物理' || s.category === '魔法') && !s.healing;
+            if (this.currentSkillCategory === 'heal') return s.healing || s.category === '神聖';
+            if (this.currentSkillCategory === 'buff') return s.category === '補助';
+            if (this.currentSkillCategory === 'debuff') return s.category === '弱体';
+            return true;
+        });
+
+        if (filteredSkills.length === 0) {
+            this.ui.log(`【システム】このカテゴリーのスキルはありません。`);
         }
 
-        allSkills.forEach(skill => {
+        filteredSkills.forEach(skill => {
             const ct = skill.currentCooldown || 0;
             const btnText = ct > 0 ? `${skill.name} (CT:${ct})` : skill.name;
 
-            // 属性色の取得
             const elementColors = {
                 "炎": "#ff4b2b", "氷": "#00d4ff", "風": "#2ecc71",
                 "土": "#a67c52", "光": "#ffd700", "闇": "#9b59b6", "無": "#ecf0f1"
@@ -66,10 +91,10 @@ export class Battle {
                     return;
                 }
                 this.executeSkill(skill);
-            }, `border: 2px solid ${borderColor}; color: ${skill.rarityColor || '#fff'}`);
+            }, `border: 2px solid ${borderColor}; color: ${skill.rarityColor || '#fff'}; width: 48%; margin: 1%; font-size: 11px;`);
         });
 
-        this.ui.addAction("戻る", () => this.playerTurn());
+        this.ui.addAction("キャンセル", () => this.playerTurn(), "width: 100%; margin-top: 5px; background: #444;");
     }
 
     showItemSelection() {
