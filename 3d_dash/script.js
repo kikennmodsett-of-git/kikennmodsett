@@ -37,6 +37,8 @@ class Game3D {
         this.moveSpeed = 0.17;
         this.rotationSpeed = 0.05;
         this.jumpForce = 0.38;
+        this.jumpCount = 0;
+        this.spacePressed = false;
 
         this.currentSection = 0;
         this.sectionThresholds = [-100, -220, -350, -500];
@@ -166,6 +168,7 @@ class Game3D {
         this.addMovingPlatform(0, 3, -82, 5, 5, 0x00ffff, new THREE.Vector3(6, 0, 0), 0.04);
         this.addMovingPlatform(0, 4, -94, 5, 5, 0x00ffff, new THREE.Vector3(-6, 0, 0), 0.05);
         this.addPlatform(0, 5, -106, 6, 6);
+        this.addPlatform(0, 5, -119, 5, 5); // Intermediate platform to fix 26u gap
 
         // Section 3: Vertical Gimmicks (Z-distance: 12)
         this.addRespawnGate(0, 5, -120, 0xff00ff);
@@ -173,6 +176,7 @@ class Game3D {
         this.addMovingPlatform(0, 6, -144, 5, 5, 0xff00ff, new THREE.Vector3(0, 4, 0), 0.03);
         this.addMovingPlatform(4, 8, -156, 5, 5, 0xff00ff, new THREE.Vector3(0, 5, 0), 0.04);
         this.addPlatform(0, 10, -172, 8, 8);
+        this.addPlatform(0, 10, -188, 6, 6); // Intermediate platform to fix 33u gap
 
         // Section 4: The Void (Controlled Randomness: Z-distance: ~10)
         this.addRespawnGate(0, 10, -190, 0xffff00);
@@ -188,6 +192,7 @@ class Game3D {
         this.addMovingPlatform(5, 15, -337, 5, 5, 0x00ffff, new THREE.Vector3(-6, 3, -4), 0.02);
         this.addMovingPlatform(-5, 18, -349, 5, 5, 0xff00ff, new THREE.Vector3(6, -3, -4), 0.03);
         this.addMovingPlatform(0, 17, -361, 6, 6, 0x00ffff, new THREE.Vector3(0, 0, -8), 0.04);
+        this.addPlatform(0, 18, -375, 8, 8); // Goal approach platform to fix 29u gap
 
         // Goal
         this.goal = this.addPlatform(0, 20, -390, 20, 20, 0x00ff00);
@@ -301,7 +306,21 @@ class Game3D {
         }
 
         // Jump & Gravity
-        if (this.keys['Space'] && this.canJump) { this.playerVelocity.y = this.jumpForce; this.canJump = false; }
+        // Jump & Gravity
+        if (this.keys['Space']) {
+            if (this.canJump && !this.spacePressed) {
+                this.playerVelocity.y = this.jumpForce;
+                this.canJump = false;
+                this.jumpCount = 1;
+                this.spacePressed = true;
+            } else if (!this.spacePressed && this.jumpCount === 1) {
+                this.playerVelocity.y = this.jumpForce;
+                this.jumpCount = 2;
+                this.spacePressed = true;
+            }
+        } else {
+            this.spacePressed = false;
+        }
         this.playerVelocity.y += this.gravity;
         this.player.position.y += this.playerVelocity.y;
 
@@ -315,6 +334,7 @@ class Game3D {
                     this.player.position.y = p.y + 0.75;
                     this.playerVelocity.y = 0;
                     this.canJump = true;
+                    this.jumpCount = 0;
                     onGround = true;
                     // Stick to moving platform
                     const mp = this.movingPlatforms.find(m => m.mesh === p.group);
