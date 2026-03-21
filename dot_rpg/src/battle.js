@@ -1,5 +1,6 @@
 import { SkillDB } from './skill_db.js';
 import { MonsterData } from './data/monsters.js';
+import { SpriteDB } from './data/sprites.js';
 
 export class Battle {
     constructor(player, monster, ui) {
@@ -20,19 +21,8 @@ export class Battle {
     }
 
     renderMonster() {
-        const m = this.monster;
-        const html = `
-            <div id="battle-view" style="text-align:center; padding: 20px;">
-                <div id="monster-graphic" class="monster-sprite ${m.shape}" style="background-color: ${m.color}; margin: 0 auto; display: flex; justify-content: center; align-items: center; font-size: 64px;">
-                    ${m.emoji || "👾"}
-                </div>
-                <div style="margin-top: 10px; font-weight: bold;">
-                    ${m.name} [属性:${m.element}] <br>
-                    <span id="monster-hp-display" style="color: #ff4b2b;">HP: ${m.hp}</span>
-                </div>
-            </div>
-        `;
-        this.ui.log(html);
+        const svg = SpriteDB.getSprite(this.monster.shape, this.monster.color);
+        this.ui.showBattleArena(this.monster, svg);
     }
 
     initiateBattle() {
@@ -150,6 +140,7 @@ export class Battle {
 
                 this.monster.hp -= damage;
                 this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
+                this.ui.updateMonsterHP(this.monster.hp, this.monster.maxHp);
 
                 // HP吸収効果
                 const lifeSteal = this.player.getSpecialEffectValue("lifeSteal");
@@ -214,6 +205,10 @@ export class Battle {
             let damage = Math.max(1, Math.floor(atk * 2 - def));
             target.hp -= damage;
             this.ui.log(`${attacker.name} の攻撃！ ${target.name} に ${damage} のダメージ！`);
+
+            if (target === this.monster) {
+                this.ui.updateMonsterHP(this.monster.hp, this.monster.maxHp);
+            }
 
             // HP吸収効果の適用 (プレイヤーが攻撃した場合のみ)
             if (isPlayer) {
@@ -322,7 +317,7 @@ export class Battle {
 
     win() {
         // モンスター撃破エフェクト
-        const monsterGraphic = document.getElementById('monster-graphic');
+        const monsterGraphic = document.getElementById('monster-graphic-large');
         if (monsterGraphic) {
             monsterGraphic.classList.add('monster-die');
         }
@@ -508,6 +503,7 @@ export class Battle {
         this.isFinished = true;
         this.player.temporaryBuffs = null;
         this.ui.clearActionPanel();
+        this.ui.hideBattleArena();
         this.ui.addAction("探索に戻る", () => window.game.showMainMap());
     }
 }

@@ -23,7 +23,21 @@
         </header>
 
         <main id="game-screen">
-            <!-- フィールド、バトル、ショップなどがここに動的に展開される -->
+            <!-- 戦闘専用の表示領域 (NEW) -->
+            <div id="battle-arena" class="hidden">
+                <div id="battle-bg"></div>
+                <div id="monster-container">
+                    <div id="monster-graphic-large"></div>
+                </div>
+                <div id="monster-stats-overlay">
+                    <h3 id="battle-monster-name">---</h3>
+                    <div id="monster-hp-container">
+                        <div id="monster-hp-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- フィールド、ショップなどがここに動的に展開される -->
             <div id="world-container" class="hidden">
                 <canvas id="world-map-canvas"></canvas>
                 <div id="player-sprite"></div>
