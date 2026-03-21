@@ -302,8 +302,9 @@ export class World {
             this.canvas.height = containerHeight;
         }
 
-        // NaN ガード: 座標が不正な場合は初期位置へ
-        if (isNaN(this.playerX) || isNaN(this.playerY)) {
+        // NaN/不正値ガード: 座標が不正な場合は初期位置へ
+        if (isNaN(this.playerX) || isNaN(this.playerY) || typeof this.playerX !== 'number') {
+            console.warn("Recovering invalid player coordinates:", this.playerX, this.playerY);
             this.playerX = 500;
             this.playerY = 500;
         }
@@ -312,14 +313,15 @@ export class World {
         this.playerX = Math.round(this.playerX);
         this.playerY = Math.round(this.playerY);
 
+        this.tileSize = this.tileSize || 32;
         this.pTargetLeft = this.playerX * this.tileSize;
         this.pTargetTop = this.playerY * this.tileSize;
 
-        // カメラ座標は四捨五入してサブピクセルのによるボケを防止
+        // カメラ座標は四捨五入してサブピクセルによるボケを防止
         this.cameraX = Math.round((containerWidth / 2) - this.pTargetLeft - (this.tileSize / 2));
         this.cameraY = Math.round((containerHeight / 2) - this.pTargetTop - (this.tileSize / 2));
 
-        // さらに NaN チェック
+        // さらに最終ガード
         if (isNaN(this.cameraX)) this.cameraX = 0;
         if (isNaN(this.cameraY)) this.cameraY = 0;
 
@@ -406,17 +408,19 @@ export class World {
 
     draw() {
         const ctx = this.ctx;
-        const ts = this.tileSize;
+        if (!ctx) return;
+        const ts = this.tileSize || 32;
         const cw = this.canvas.width;
         const ch = this.canvas.height;
 
-        if (cw <= 0 || ch <= 0 || isNaN(this.cameraX)) return;
+        if (cw <= 0 || ch <= 0 || isNaN(this.cameraX) || isNaN(this.cameraY)) return;
 
+        // 背景クリア
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, cw, ch);
+
+        ctx.save(); // スタック管理のため必ずセットで実行
         try {
-            ctx.fillStyle = "#000";
-            ctx.fillRect(0, 0, cw, ch);
-
-            ctx.save();
             ctx.translate(this.cameraX, this.cameraY);
 
             // 視野内のタイルのみ描画

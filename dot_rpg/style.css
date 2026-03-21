@@ -186,7 +186,8 @@ button:active {
 #world-container {
     width: 100%;
     height: 300px;
-    /* バトル時などは可変、探索時はこの固定高 */
+    min-height: 300px;
+    /* レイアウト崩れによる 0px 化を防止 */
     position: relative;
     overflow: hidden;
     background: #000;
