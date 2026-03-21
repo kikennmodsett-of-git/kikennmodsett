@@ -5,6 +5,9 @@ export const MonsterData = {
         const prefixes = ["迷子の", "怒れる", "古代の", "深淵の", "聖なる", "猛毒の", "呪われた", "伝説の", "虚無の", "紅蓮の"];
         const shapes = ["slime", "beast", "ghost", "dragon", "knight", "serpent"];
         const elements = ["炎", "氷", "風", "土", "光", "闇", "無"];
+        const emojiMap = {
+            slime: "💧", beast: "🐺", ghost: "👻", dragon: "🐲", knight: "💀", serpent: "🐍"
+        };
 
         for (let i = 1; i <= 1500; i++) {
             const pIdx = Math.floor(i / 10) % prefixes.length;
@@ -23,6 +26,7 @@ export const MonsterData = {
                 gold: i * 20,
                 color: `hsl(${i * 137.5 % 360}, 70%, 50%)`,
                 shape: shapes[i % shapes.length],
+                emoji: emojiMap[shapes[i % shapes.length]] || "👾",
                 element: elements[i % elements.length],
                 isBoss: i % 100 === 0,
                 isDungeonMonster: i > 20

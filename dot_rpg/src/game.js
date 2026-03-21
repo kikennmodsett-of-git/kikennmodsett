@@ -606,20 +606,29 @@ class Game {
         if (s2.type === 'material') {
             const m = s2.materialData;
             if (m.isRare) {
-                // 【圧倒的な差】レアドロップ素材による強化 (5.0倍)
-                const factor = 5.0;
+                // 【一級品の性能】レアドロップ素材による極限強化 (10.0倍)
+                const factor = 10.0;
                 if (isWeapon) {
-                    newItem.atk = Math.floor((newItem.atk + m.level * 2) * factor);
-                    newItem.name = `[神極]${s1.name.replace("[神極]", "").replace("+", "")}`;
+                    newItem.atk = Math.floor((newItem.atk + m.level * 5) * factor);
+                    newItem.name = `[神極・一級品]${s1.name.replace("[神極]", "").replace("[神極・一級品]", "").replace("+", "")}`;
                 } else {
                     for (let s in newItem.stats) {
-                        newItem.stats[s] = Math.floor((newItem.stats[s] + m.level) * factor);
+                        newItem.stats[s] = Math.floor((newItem.stats[s] + m.level * 2) * factor);
                     }
-                    newItem.name = `[神極]${s1.name.replace("[神極]", "").replace("+", "")}`;
+                    newItem.name = `[神極・一級品]${s1.name.replace("[神極]", "").replace("[神極・一級品]", "").replace("+", "")}`;
                 }
+
+                // 強力な特殊効果の付与
+                newItem.effects = {
+                    expBoost: 50,
+                    goldBoost: 50,
+                    lifeSteal: 10,
+                    luck: 20
+                };
+
                 newItem.isExtreme = true;
-                newRarity = Math.max(newRarity + 2, 4); // ☆4以上保証
-                this.ui.log(`<span style="color:#ffff00; font-weight:bold; font-size:14px;">レアドロップ素材が真の力を超絶解放させた！「神極」装備の誕生！</span>`);
+                newRarity = 6; // ☆6 (ミシック) 固定
+                this.ui.log(`<span style="color:#ff00ff; font-weight:bold; font-size:16px; text-shadow: 0 0 5px #fff;">【超絶覚醒】レアドロップ素材により、一級品の神域装備が誕生した！</span>`);
             } else {
                 // 通常素材による強化
                 const matLevelBonus = Math.floor(m.level * 1.2);
@@ -649,15 +658,20 @@ class Game {
 
             if (isWeapon) {
                 newItem.atk = Math.floor(((s1.atk || 0) + (s2.atk || 0)) / 2 * boost);
-                newItem.name = anyExtreme ? `[神極]${s1.name.replace("[神極]", "").replace("真・", "")}` : `真・${s1.name.replace("真・", "")}`;
+                newItem.name = anyExtreme ? `[神極・一級品]${s1.name.replace("[神極]", "").replace("[神極・一級品]", "").replace("真・", "")}` : `真・${s1.name.replace("真・", "")}`;
             } else {
                 for (let s in newItem.stats) {
                     newItem.stats[s] = Math.floor(((s1.stats[s] || 0) + (s2.stats[s] || 0)) / 2 * boost);
                 }
-                const prefix = anyExtreme ? "[神極]" : (isAccessory ? "極・" : "硬・");
-                newItem.name = `${prefix}${s1.name.replace("[神極]", "").replace("極・", "").replace("硬・", "")}`;
+                const prefix = anyExtreme ? "[神極・一級品]" : (isAccessory ? "極・" : "硬・");
+                newItem.name = `${prefix}${s1.name.replace("[神極]", "").replace("[神極・一級品]", "").replace("極・", "").replace("硬・", "")}`;
             }
-            if (anyExtreme) newItem.isExtreme = true;
+            if (anyExtreme) {
+                newItem.isExtreme = true;
+                if (!newItem.effects) {
+                    newItem.effects = { expBoost: 30, goldBoost: 30, lifeSteal: 5 };
+                }
+            }
 
             // 属性の合成
             if (s1.element === "無" || !s1.element) newItem.element = s2.element || "無";

@@ -23,10 +23,12 @@ export class Battle {
         const m = this.monster;
         const html = `
             <div id="battle-view" style="text-align:center; padding: 20px;">
-                <div class="monster-sprite ${m.shape}" style="background-color: ${m.color}; margin: 0 auto;"></div>
+                <div id="monster-graphic" class="monster-sprite ${m.shape}" style="background-color: ${m.color}; margin: 0 auto; display: flex; justify-content: center; align-items: center; font-size: 64px;">
+                    ${m.emoji || "👾"}
+                </div>
                 <div style="margin-top: 10px; font-weight: bold;">
                     ${m.name} [属性:${m.element}] <br>
-                    <span style="color: #ff4b2b;">HP: ${m.hp}</span>
+                    <span id="monster-hp-display" style="color: #ff4b2b;">HP: ${m.hp}</span>
                 </div>
             </div>
         `;
@@ -319,6 +321,20 @@ export class Battle {
     }
 
     win() {
+        // モンスター撃破エフェクト
+        const monsterGraphic = document.getElementById('monster-graphic');
+        if (monsterGraphic) {
+            monsterGraphic.classList.add('monster-die');
+        }
+
+        // エフェクト終了を待ってからリザルト表示
+        setTimeout(() => {
+            if (this.isFinished) return;
+            this.executeWinSequence();
+        }, 800);
+    }
+
+    executeWinSequence() {
         this.ui.log(`${this.monster.name} を倒した！`);
 
         // 特殊効果によるボーナス計算
@@ -349,18 +365,17 @@ export class Battle {
             this.ui.log("レベルアップ！ ステータスポイントを5獲得しました。");
         }
 
-        // スキル習得判定 (計20%の内訳: Mythic 0.15%, Legend 0.85%, Epic 1%, Rare 3%, Uncommon 5%, Common 10%)
+        // スキル習得判定 (計40%の内訳: Mythic 0.3%, Legend 1.7%, Epic 2%, Rare 6%, Uncommon 10%, Common 20%)
         const skillRoll = Math.random();
-        if (skillRoll < 0.20) {
+        if (skillRoll < 0.40) {
             let rarityIdx = 0; // 0:Common, 1:Uncommon, 2:Rare, 3:Epic, 4:Legendary, 5:Mythic
 
-            // 0.20 の内訳を判定 (0.20を100%とした時の相対値ではなく、0.0〜1.0の絶対値で判定)
-            if (skillRoll < 0.0015) rarityIdx = 5; // Mythic (0.15%)
-            else if (skillRoll < 0.01) rarityIdx = 4; // Legendary (0.85% = 0.01 - 0.0015)
-            else if (skillRoll < 0.02) rarityIdx = 3; // Epic (1.0% = 0.02 - 0.01)
-            else if (skillRoll < 0.05) rarityIdx = 2; // Rare (3.0% = 0.05 - 0.02)
-            else if (skillRoll < 0.10) rarityIdx = 1; // Uncommon (5.0% = 0.10 - 0.05)
-            else rarityIdx = 0; // Common (10.0% = 0.20 - 0.10)
+            if (skillRoll < 0.003) rarityIdx = 5; // Mythic (0.3%)
+            else if (skillRoll < 0.02) rarityIdx = 4; // Legendary (1.7%)
+            else if (skillRoll < 0.04) rarityIdx = 3; // Epic (2.0%)
+            else if (skillRoll < 0.10) rarityIdx = 2; // Rare (6.0%)
+            else if (skillRoll < 0.20) rarityIdx = 1; // Uncommon (10.0%)
+            else rarityIdx = 0; // Common (20.0%)
 
             const skillCandidates = SkillDB.generateSkills().filter(s => s.rarity === SkillDB.getRarityName(rarityIdx));
             if (skillCandidates.length > 0) {
@@ -374,7 +389,7 @@ export class Battle {
         }
 
         // 素材ドロップ判定
-        const luckBonus = this.player.stats.luck * 0.01;
+        const luckBonus = (this.player.stats.luck || 0) * 0.01;
         const rollNormal = Math.random();
         const rollRare = Math.random();
 
@@ -395,10 +410,10 @@ export class Battle {
             this.gainMaterial(materialName, materialLevel, false);
         }
 
-        // レアドロップ判定 (80通りの名前候補を動的に生成)
+        // レアドロップ判定
         if (rollRare < dropRateRare) {
-            const rarePrefixes = ["神聖な", "呪われた", "いにしえの", "黄金の", "暗黒の", "輝く", "震える", "静かな", "荒ぶる", "高貴な"]; // 10
-            const rareBases = ["大剣", "盾", "首飾り", "指輪", "魔導書", "宝珠", "結晶", "聖遺物"]; // 8 -> 計80通り
+            const rarePrefixes = ["神聖な", "呪われた", "いにしえの", "黄金の", "暗黒の", "輝く", "震える", "静かな", "荒ぶる", "高貴な"];
+            const rareBases = ["大剣", "盾", "首飾り", "指輪", "魔導書", "宝珠", "結晶", "聖遺物"];
 
             const pIdx = Math.floor(Math.random() * rarePrefixes.length);
             const bIdx = Math.floor(Math.random() * rareBases.length);
@@ -407,16 +422,15 @@ export class Battle {
             this.gainMaterial(rareItemName, materialLevel, true);
         }
 
-        // --- アクセサリドロップ判定 (NEW) ---
+        // --- アクセサリドロップ判定 ---
         const rollAcc = Math.random();
-        const dropRateAcc = 0.03 + luckBonus; // 基礎3% + 幸運
+        const dropRateAcc = 0.03 + luckBonus;
 
         if (rollAcc < dropRateAcc) {
             const accNames = ["お守り", "リング", "ネックレス", "ピアス", "ブレスレット", "アンクレット"];
             const accPrefixes = ["光る", "重厚な", "神秘的な", "古びた", "魔力漂う"];
             const name = `${accPrefixes[Math.floor(Math.random() * accPrefixes.length)]}${accNames[Math.floor(Math.random() * accNames.length)]}`;
 
-            // レアリティ判定 (基本1, ラッキーで上昇)
             let rarity = 1;
             if (Math.random() < 0.1 + luckBonus * 0.05) rarity = 2;
             if (Math.random() < 0.02 + luckBonus * 0.02) rarity = 3;
@@ -434,7 +448,6 @@ export class Battle {
                 rarity: rarity
             };
 
-            // 1%の確率で特殊効果を付与
             if (Math.random() < 0.01) {
                 const effects = [
                     { key: "expBoost", value: 10, label: "経験値+10%" },
@@ -448,12 +461,11 @@ export class Battle {
             } else {
                 this.ui.log(`<span style="color: #00ff00;">アクセサリ「${accessory.name}」を入手した！</span>`);
             }
-
             this.player.inventory.push(accessory);
         }
 
         this.ui.updateHeader(this.player);
-        window.game.saveGame('auto'); // 戦闘勝利時にオートセーブ
+        window.game.saveGame('auto');
         this.endBattle();
     }
 
@@ -474,7 +486,6 @@ export class Battle {
         this.isFinished = true;
         this.ui.clearActionPanel();
 
-        // セーブデータの存在確認
         const hasSave = localStorage.getItem('pixel_adventure_save_manual') ||
             localStorage.getItem('pixel_adventure_save_auto') ||
             localStorage.getItem('pixel_adventure_save');
@@ -482,7 +493,7 @@ export class Battle {
         if (hasSave) {
             this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。冒険を再開するにはデータをロードしてください。</span>");
             this.ui.addAction("データをロードして再開", () => {
-                window.game.showGameOverMenu(); // 専用のゲームオーバーメニュー（スロット選択）を表示
+                window.game.showGameOverMenu();
             }, "background: #ff4b2b; font-weight: bold;");
         } else {
             this.ui.log("<span style='color:#ff4b2b;'>【敗北】力尽きました。セーブデータがないため、初期地点から復帰します。</span>");
@@ -495,7 +506,7 @@ export class Battle {
     endBattle(customMsg) {
         if (customMsg) this.ui.log(customMsg);
         this.isFinished = true;
-        this.player.temporaryBuffs = null; // バフのリセット
+        this.player.temporaryBuffs = null;
         this.ui.clearActionPanel();
         this.ui.addAction("探索に戻る", () => window.game.showMainMap());
     }
