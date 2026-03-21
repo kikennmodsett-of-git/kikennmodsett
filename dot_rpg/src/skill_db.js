@@ -8,7 +8,10 @@ export const SkillDB = {
             { name: "大地の断罪", element: "土", category: "魔法" },
             { name: "聖天の福音", element: "光", category: "神聖", healing: true },
             { name: "冥府の呪縛", element: "闇", category: "魔法" },
-            { name: "疾風の乱舞", element: "風", category: "魔法" }
+            { name: "疾風の乱舞", element: "風", category: "魔法" },
+            { name: "力の咆哮", element: "無", category: "補助", buff: { target: 'player', stat: 'attack', value: 1.5 } },
+            { name: "鉄壁の構え", element: "無", category: "補助", buff: { target: 'player', stat: 'defense', value: 1.5 } },
+            { name: "威圧の眼光", element: "無", category: "弱体", buff: { target: 'monster', stat: 'defense', value: 0.7 } }
         ];
         const rarities = [
             { name: "コモン", color: "#ffffff" },
@@ -51,10 +54,16 @@ export const SkillDB = {
                 mpCost: isPassive ? 0 : (10 + Math.floor(i / 30)),
                 cooldown: isPassive ? 0 : 2 + Math.floor(i / 150),
                 currentCooldown: 0,
-                trigger: isPassive ? (i % 2 === 0 ? "onTurnEnd" : "onDamageTaken") : null
+                trigger: isPassive ? (i % 2 === 0 ? "onTurnEnd" : "onDamageTaken") : null,
+                buff: typeInfo.buff || null
             });
         }
         return skills;
+    },
+
+    getRarityName(idx) {
+        const rarities = ["コモン", "アンコモン", "レア", "エピック", "レジェンダリー", "ミシック"];
+        return rarities[idx] || "コモン";
     },
 
     getElementalMultiplier(atkElement, defElement) {

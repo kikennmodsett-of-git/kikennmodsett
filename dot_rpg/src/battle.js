@@ -42,6 +42,7 @@ export class Battle {
         this.ui.clearActionPanel();
         this.ui.addAction("通常攻撃", () => this.executeAttack(this.player, this.monster, true));
         this.ui.addAction("スキル選択", () => this.showSkillSelection());
+        this.ui.addAction("アイテム", () => this.showItemSelection());
         this.ui.addAction("防御", () => this.executeDefend());
         this.ui.addAction("逃げる", () => this.executeEscape());
     }
@@ -79,6 +80,48 @@ export class Battle {
         this.ui.addAction("戻る", () => this.playerTurn());
     }
 
+    showItemSelection() {
+        this.ui.clearActionPanel();
+        const consumables = this.player.inventory.filter(item => item.type === 'item');
+
+        if (consumables.length === 0) {
+            this.ui.log("使えるアイテムがない！");
+            this.playerTurn();
+            return;
+        }
+
+        // ユニークなアイテムごとに集計して表示
+        const itemMap = new Map();
+        consumables.forEach(item => {
+            if (!itemMap.has(item.name)) itemMap.set(item.name, { count: 0, item: item });
+            itemMap.get(item.name).count++;
+        });
+
+        itemMap.forEach((val, name) => {
+            this.ui.addAction(`${name} (×${val.count})`, () => this.executeItemUse(val.item));
+        });
+
+        this.ui.addAction("戻る", () => this.playerTurn());
+    }
+
+    executeItemUse(item) {
+        this.ui.clearActionPanel();
+        this.ui.log(`${this.player.name} は ${item.name} を使った！`);
+
+        if (item.effect === 'heal') {
+            const healAmount = item.value || 50;
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + healAmount);
+            this.ui.log(`体力が ${healAmount} 回復した。`);
+        }
+
+        // インベントリから1つ削除
+        const idx = this.player.inventory.indexOf(item);
+        if (idx > -1) this.player.inventory.splice(idx, 1);
+
+        this.ui.updateHeader(this.player);
+        this.monsterTurn();
+    }
+
     executeSkill(skill) {
         this.ui.clearActionPanel(); // 連打防止: 選択した瞬間にボタンを消す
         if (skill.healing) {
@@ -106,7 +149,7 @@ export class Battle {
                 this.monster.hp -= damage;
                 this.ui.log(`${this.monster.name} に ${damage} のダメージ！`);
 
-                // HP吸収効果の適用
+                // HP吸収効果
                 const lifeSteal = this.player.getSpecialEffectValue("lifeSteal");
                 if (lifeSteal > 0) {
                     const heal = Math.max(1, Math.floor(damage * (lifeSteal / 100)));
@@ -114,6 +157,19 @@ export class Battle {
                     this.ui.log(`[特殊効果] ダメージの一部を吸収！体力を ${heal} 回復した。`);
                     this.ui.updateHeader(this.player);
                 }
+            }
+        }
+
+        // バフ・デバフ効果の適用 (NEW)
+        if (skill.buff) {
+            const b = skill.buff;
+            if (b.target === 'player') {
+                if (!this.player.temporaryBuffs) this.player.temporaryBuffs = {};
+                this.player.temporaryBuffs[b.stat] = (this.player.temporaryBuffs[b.stat] || 1.0) * b.value;
+                this.ui.log(`${this.player.name} の ${b.stat === 'attack' ? '攻撃力' : '防御力'} が上昇した！ (倍率:${b.value})`);
+            } else if (b.target === 'monster') {
+                this.monster[b.stat] = Math.floor(this.monster[b.stat] * b.value);
+                this.ui.log(`${this.monster.name} の ${b.stat === 'attack' ? '攻撃力' : '防御力'} が低下した！ (倍率:${b.value})`);
             }
         }
 
@@ -141,7 +197,19 @@ export class Battle {
             this.ui.log(`${target.name} は攻撃を回避した！`);
         } else {
             const totalStats = this.player.getTotalStats();
-            let damage = Math.max(1, (attacker === this.player ? totalStats.attack : attacker.atk) * 2 - (target === this.player ? totalStats.defense : target.def));
+
+            // バフ補正の適用
+            let atk = (attacker === this.player) ? totalStats.attack : attacker.atk;
+            let def = (target === this.player) ? totalStats.defense : target.def;
+
+            if (attacker === this.player && this.player.temporaryBuffs && this.player.temporaryBuffs.attack) {
+                atk *= this.player.temporaryBuffs.attack;
+            }
+            if (target === this.player && this.player.temporaryBuffs && this.player.temporaryBuffs.defense) {
+                def *= this.player.temporaryBuffs.defense;
+            }
+
+            let damage = Math.max(1, Math.floor(atk * 2 - def));
             target.hp -= damage;
             this.ui.log(`${attacker.name} の攻撃！ ${target.name} に ${damage} のダメージ！`);
 
@@ -281,13 +349,35 @@ export class Battle {
             this.ui.log("レベルアップ！ ステータスポイントを5獲得しました。");
         }
 
+        // スキル習得判定 (20%の確率でスキルをリサーチ)
+        if (Math.random() < 0.20) {
+            const roll = Math.random() * 20; // 0.00 〜 20.00
+            let rarityIdx = 0; // 0:Common, 1:Uncommon, 2:Rare, 3:Epic, 4:Legendary, 5:Mythic
+
+            if (roll < 0.15) rarityIdx = 5; // Mythic (0.15%)
+            else if (roll < 1.0) rarityIdx = 4; // Legendary (0.85%)
+            else if (roll < 2.0) rarityIdx = 3; // Epic (1.0%)
+            else if (roll < 5.0) rarityIdx = 2; // Rare (3.0%)
+            else if (roll < 10.0) rarityIdx = 1; // Uncommon (5.0%)
+            else rarityIdx = 0; // Common (10.0%)
+
+            const skillCandidates = SkillDB.generateSkills().filter(s => s.rarity === SkillDB.getRarityName(rarityIdx));
+            if (skillCandidates.length > 0) {
+                const newSkill = skillCandidates[Math.floor(Math.random() * skillCandidates.length)];
+                if (!this.player.skills.some(s => s.id === newSkill.id)) {
+                    this.player.skills.push(newSkill);
+                    this.ui.log(`<span style="color: ${newSkill.rarityColor}; font-weight: bold;">[スキル習得] ${newSkill.name} を手に入れた！</span>`);
+                }
+            }
+        }
+
         // 素材ドロップ判定
-        const luckBonus = this.player.stats.luck * 0.01; // 幸運ボーナスの影響を10倍に強化
+        const luckBonus = this.player.stats.luck * 0.01;
         const rollNormal = Math.random();
         const rollRare = Math.random();
 
         const dropRateNormal = 0.75 + luckBonus;
-        const dropRateRare = 0.05 + luckBonus;
+        const dropRateRare = 0.01; // 1%に固定
 
         const materialLevel = Math.floor(this.monster.level / 5) + 1;
 
@@ -403,6 +493,7 @@ export class Battle {
     endBattle(customMsg) {
         if (customMsg) this.ui.log(customMsg);
         this.isFinished = true;
+        this.player.temporaryBuffs = null; // バフのリセット
         this.ui.clearActionPanel();
         this.ui.addAction("探索に戻る", () => window.game.showMainMap());
     }

@@ -317,20 +317,49 @@ export class Inventory {
         }
 
         const auto = getMeta('auto');
+        const saveCode = window.game.getSaveCode();
+
         html += `
             <h4 style="margin-top:15px;">【オートセーブ】</h4>
             <div style="font-size: 11px; background: rgba(255,165,0,0.2); padding: 5px; border-radius: 5px;">
                 ${auto ? `最新: ${auto.date} (Lv.${auto.lv}) <br><button onclick="game.inventory.confirmLoad('auto')">このデータをロード</button>` : '記録なし'}
+            </div>
+            <hr>
+            <h4>【セーブコード】</h4>
+            <p style="font-size: 10px;">このコードを記録しておくと、ブラウザを変えても続きから遊べます。</p>
+            <textarea id="save-code-area" readonly style="width:100%; height:60px; font-size:9px; background:#222; color:#0f0; border:1px solid #444; border-radius:3px;">${saveCode}</textarea>
+            <button onclick="game.inventory.copySaveCode()" style="background:#27ae60; margin-bottom:10px;">コードをコピー</button>
+            
+            <div style="border:1px solid #555; padding:8px; border-radius:4px; margin-top:10px;">
+                <p style="font-size: 10px; margin-bottom:5px;">コードからインポート:</p>
+                <textarea id="import-code-area" placeholder="ここにコードを貼り付け" style="width:100%; height:40px; font-size:9px; background:#111; color:#fff; border:1px solid #444;"></textarea>
+                <button onclick="game.inventory.handleImport()" style="background:#e67e22; width:100%;">インポート実行</button>
             </div>
         `;
 
         html += `
             </div>
             <p style="margin-top:15px; font-size:10px; color:#aaa;">
-                ※ロードすると現在の進行状況は破壊されます。
+                ※ロード・インポートすると現在の進行状況は破壊されます。
             </p>
         `;
         document.getElementById('inv-content').innerHTML = html;
+    }
+
+    copySaveCode() {
+        const area = document.getElementById('save-code-area');
+        area.select();
+        document.execCommand('copy');
+        alert("セーブコードをクリップボードにコピーしました！");
+    }
+
+    handleImport() {
+        const code = document.getElementById('import-code-area').value;
+        if (!code) return;
+        if (confirm("セーブコードからデータを復元しますか？（現在の状況は消去されます）")) {
+            window.game.importSaveCode(code);
+            this.ui.hideModal();
+        }
     }
 
     confirmLoad(type, slot = 1) {

@@ -41,9 +41,18 @@ class Game {
             this.loadGame('auto');
         }
 
-        this.ui.log("Pixel Adventure Ver 2.5 へようこそ！");
+        // 離脱時の警告設定 (NEW)
+        window.onbeforeunload = (e) => {
+            const msg = "ゲームを閉じる前に、セーブコードをコピーしましたか？未保存の進行状況は失われる可能性があります。";
+            e.returnValue = msg;
+            return msg;
+        };
+
+        this.ui.log("Pixel Adventure Ver 3.0 (Island Update) へようこそ！");
         if (!this.isLoaded) {
-            this.ui.log("WASDで町を探索し、ダンジョンへ挑みましょう。");
+            this.ui.log("島の中央「始まりの村」から冒険が始まります。WASDで探索しましょう。");
+            this.world.playerX = 500;
+            this.world.playerY = 500;
             this.player.learnSkill(this.skillDB[0]);
             this.player.learnSkill(this.skillDB[3]);
         }
@@ -63,47 +72,34 @@ class Game {
         }
     }
 
-    startRandomBattle(targetLv = null) {
+    startRandomBattle() {
         this.isBattleActive = true;
         this.world.hide();
-        this.saveGame('auto'); // 戦闘開始時点の状態を保存（不整合防止）
+        this.saveGame('auto');
 
-        let minLv, maxLv;
+        const type = this.world.mapData[this.world.playerY][this.world.playerX];
 
-        if (targetLv) {
-            // ダンジョンなどの指定レベルがある場合
-            minLv = Math.max(1, targetLv - 2);
-            maxLv = targetLv + 5;
-        } else {
-            // 中心(10, 10)からの距離によるレベル調整
-            const startX = 10;
-            const startY = 10;
-            const dist = Math.sqrt(Math.pow(this.world.playerX - startX, 2) + Math.pow(this.world.playerY - startY, 2));
+        // バイオームごとのレベル帯定義
+        const levelRanges = {
+            volcano: { min: 1200, max: 1500 },
+            desert: { min: 900, max: 1200 },
+            snow: { min: 600, max: 900 },
+            jungle: { min: 300, max: 600 },
+            grass: { min: 1, max: 300 },
+            forest: { min: 50, max: 400 },
+            mountain: { min: 200, max: 800 }
+        };
 
-            if (dist < 50) {
-                // 平原エリア (Lv.1〜10) - より初心者に優しく
-                const baseLv = 1 + Math.floor(dist / 10);
-                minLv = Math.max(1, baseLv - 1);
-                maxLv = Math.min(10, baseLv + 1);
-            } else {
-                // 平原の外 (Lv.11〜) - 上昇を緩やかに
-                const baseLv = 11 + Math.floor((dist - 50) / 4);
-                minLv = baseLv - 3;
-                maxLv = baseLv + 3;
-            }
-        }
+        const range = levelRanges[type] || { min: 1, max: 100 };
+        const level = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
 
-        const candidates = this.allMonsters.filter(m => m.level >= minLv && m.level <= maxLv && !m.isBoss);
+        const candidates = this.allMonsters.filter(m => m.level >= level - 5 && m.level <= level + 5 && !m.isBoss);
         const monster = candidates.length > 0
-            ? JSON.parse(JSON.stringify(candidates[Math.floor(Math.random() * candidates.length)])) // インスタンスを壊さないためにコピー
-            : JSON.parse(JSON.stringify(this.allMonsters[0]));
+            ? JSON.parse(JSON.stringify(candidates[Math.floor(Math.random() * candidates.length)]))
+            : JSON.parse(JSON.stringify(this.allMonsters[Math.min(level - 1, this.allMonsters.length - 1)]));
 
         const battle = new Battle(this.player, monster, this.ui);
         battle.start();
-
-        if (monster.isBoss && !this.isLastBossDefeated) {
-            this.isLastBossDefeated = true; // 実際には勝利時にフラグを立てるが、簡易化
-        }
     }
 
     useInn() {
@@ -165,58 +161,93 @@ class Game {
     }
 
     openShop() {
+        this.shopData = { category: 'weapon' };
+        this.updateShopUI();
+    }
+
+    selectShopCategory(cat) {
+        this.shopData.category = cat;
+        this.updateShopUI();
+    }
+
+    updateShopUI() {
         const discount = this.player.getDiscountRate();
+        const cat = this.shopData.category;
 
-        const items = [
-            { type: 'weapon', name: "青銅の剣", atk: 10, price: 1000 },
-            { type: 'weapon', name: "鉄の剣", atk: 25, price: 3000 },
-            { type: 'weapon', name: "炎の剣", atk: 40, price: 8000, element: "炎" },
-            { type: 'armor', slot: 'chest', name: "水の鎧", stats: { defense: 15 }, price: 6000, element: "氷" },
-            { type: 'armor', slot: 'waist', name: "光の腰帯", stats: { defense: 5, luck: 10 }, price: 12000, element: "光", isRare: true },
-            { type: 'armor', slot: 'head', name: "鉄の兜", stats: { defense: 5 }, price: 800 },
-            { type: 'armor', slot: 'chest', name: "鉄の胸当て", stats: { defense: 12 }, price: 2000 },
-            { type: 'armor', slot: 'legs', name: "鉄の具足", stats: { defense: 8 }, price: 1500 },
-            { type: 'armor', slot: 'feet', name: "鉄のブーツ", stats: { defense: 4, agility: 2 }, price: 1000, rarity: 1 },
-            { type: 'armor', slot: 'waist', name: "鉄の腰帯", stats: { defense: 3, luck: 2 }, price: 800, rarity: 1 },
-            { type: 'accessory', name: "旅人の指輪", stats: { defense: 1, luck: 5 }, price: 5000, rarity: 1 },
-            { type: 'accessory', name: "守りのアミュレット", stats: { defense: 8 }, price: 8000, rarity: 1 }
-        ];
+        const allItems = {
+            weapon: [
+                { type: 'weapon', name: "青銅の剣", atk: 15, price: 1000 },
+                { type: 'weapon', name: "鉄の剣", atk: 35, price: 3000 },
+                { type: 'weapon', name: "炎の剣", atk: 60, price: 8000, element: "炎" },
+                { type: 'weapon', name: "氷の細剣", atk: 55, price: 7500, element: "氷" },
+                { type: 'weapon', name: "雷鳴の大剣", atk: 120, price: 25000, element: "風", rarity: 2 }
+            ],
+            armor: [
+                { type: 'armor', slot: 'head', name: "鉄の兜", stats: { defense: 8 }, price: 800 },
+                { type: 'armor', slot: 'chest', name: "鉄の胸当て", stats: { defense: 20 }, price: 2000 },
+                { type: 'armor', slot: 'legs', name: "鉄の具足", stats: { defense: 12 }, price: 1500 },
+                { type: 'armor', slot: 'feet', name: "鉄のブーツ", stats: { defense: 6, agility: 5 }, price: 1200 },
+                { type: 'armor', slot: 'waist', name: "鉄の腰帯", stats: { defense: 5, luck: 5 }, price: 1000 },
+                { type: 'armor', slot: 'chest', name: "聖騎士の鎧", stats: { defense: 50 }, price: 15000, element: "光", rarity: 2 }
+            ],
+            accessory: [
+                { type: 'accessory', name: "力の指輪", stats: { attack: 10 }, price: 5000, rarity: 2 },
+                { type: 'accessory', name: "守りの腕輪", stats: { defense: 10 }, price: 5000, rarity: 2 },
+                { type: 'accessory', name: "疾風の耳飾り", stats: { agility: 10 }, price: 6000, rarity: 2 },
+                { type: 'accessory', name: "幸運の首飾り", stats: { luck: 15 }, price: 7000, rarity: 2 },
+                { type: 'accessory', name: "生命のブローチ", stats: { hp: 100 }, price: 10000, rarity: 2 }
+            ],
+            item: [
+                { type: 'item', name: "ポーション", effect: 'heal', value: 100, price: 200 },
+                { type: 'item', name: "ハイポーション", effect: 'heal', value: 500, price: 800 },
+                { type: 'item', name: "エリクサー", effect: 'heal', value: 2000, price: 5000 }
+            ]
+        };
 
-        let html = `<h3>総合ショップ</h3><p>厳選された装備品です。</p><div class="shop-grid">`;
+        const items = allItems[cat];
+        let html = `<h3>ショップ - ${this.getCategoryName(cat)}</h3>`;
+        html += `<p>人徳割引適用中: ${Math.floor(discount * 100)}% OFF</p>`;
 
-        items.forEach((item, idx) => {
-            // 基本価格を35%引きにし、さらに人徳割引を適用
-            const baseDiscountedPrice = Math.floor(item.price * 0.65);
-            const price = Math.floor(baseDiscountedPrice * (1 - discount));
+        html += `<div class="inv-tabs">
+            <button onclick="game.selectShopCategory('weapon')" ${cat === 'weapon' ? 'style="background:var(--accent-color)"' : ''}>武器</button>
+            <button onclick="game.selectShopCategory('armor')" ${cat === 'armor' ? 'style="background:var(--accent-color)"' : ''}>防具</button>
+            <button onclick="game.selectShopCategory('accessory')" ${cat === 'accessory' ? 'style="background:var(--accent-color)"' : ''}>装飾品</button>
+            <button onclick="game.selectShopCategory('item')" ${cat === 'item' ? 'style="background:var(--accent-color)"' : ''}>道具</button>
+        </div>`;
+
+        html += `<div class="shop-grid" style="margin-top:10px;">`;
+        items.forEach(item => {
+            const price = Math.floor(item.price * (1 - discount));
             const statText = item.type === 'weapon' ? `攻撃+${item.atk}` :
-                Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', ');
+                (item.type === 'item' ? `効果:${item.value}` : Object.entries(item.stats).map(([k, v]) => `${k}+${v}`).join(', '));
 
             html += `
-                <div class="shop-item" style="border: 1px solid var(--accent-color); padding: 10px; margin: 5px;">
+                <div class="shop-item" style="border: 1px solid #444; padding: 10px; font-size: 11px;">
                     <strong>${item.name}</strong><br>
-                    ${statText}<br>
+                    <small>${statText}</small><br>
                     価格: ${price} G<br>
                     <button onclick='game.buyShopItem(${JSON.stringify(item)}, ${price})'>購入</button>
                 </div>
             `;
         });
-
-        html += `</div><button onclick="game.ui.hideModal()">店を出る</button>`;
+        html += `</div><button onclick="game.ui.hideModal()" style="margin-top:10px;">閉じる</button>`;
         this.ui.showModal(html);
+    }
+
+    getCategoryName(cat) {
+        const names = { weapon: "武器", armor: "防具", accessory: "アクセサリ", item: "アイテム" };
+        return names[cat] || "";
     }
 
     buyShopItem(item, price) {
         if (this.player.gold >= price) {
             this.player.gold -= price;
-            if (item.type === 'weapon') {
-                this.player.inventory.push({ ...item, type: 'weapon' }); // 武器もインベントリへ
-            } else {
-                this.player.inventory.push(item);
-            }
+            // ディープコピーして追加
+            this.player.inventory.push(JSON.parse(JSON.stringify(item)));
             this.ui.log(`${item.name} を購入しました！`);
             this.ui.updateHeader(this.player);
             this.saveGame('auto');
-            this.openShop();
+            this.updateShopUI();
         } else {
             this.ui.log("ゴールドが足りません！");
         }
@@ -458,28 +489,45 @@ class Game {
 
             // 合成可能な候補を表示
             const p = this.player;
-            let candidates = p.inventory.filter(item => item.type === 'weapon' || item.type === 'armor' || item.type === 'accessory');
+            let candidates = [];
 
-            // 1つ目が選択されている場合、同じ部位・タイプのものを抽出
-            if (this.synthBuffer.length === 1) {
+            if (this.synthBuffer.length === 0) {
+                // 1つ目はベースとなる装備（武器・防具・アクセサリ）のみ
+                candidates = p.inventory.filter(item => ['weapon', 'armor', 'accessory'].includes(item.type));
+            } else {
+                // 2つ目は、1つ目と同じ種類の装備、または「素材」
                 const first = this.synthBuffer[0];
-                candidates = candidates.filter(item => {
+                candidates = p.inventory.filter(item => {
                     if (item === first) return false;
-                    if (first.type !== item.type) return false;
-                    if (first.type === 'armor' && first.slot !== item.slot) return false;
-                    return true;
+                    if (first.type === item.type) {
+                        if (first.type === 'armor' && first.slot !== item.slot) return false;
+                        return true;
+                    }
+                    return false;
                 });
+
+                // 素材も候補に加える
+                const materials = Object.entries(p.materials).filter(([_, m]) => m.count > 0).map(([key, m]) => ({
+                    type: 'material',
+                    name: key,
+                    materialData: m
+                }));
+                candidates = [...candidates, ...materials];
             }
 
             html += `<div style="max-height: 250px; overflow-y:auto; border:1px solid #444; padding:5px;">`;
             if (candidates.length === 0) {
-                html += "<p>合成可能な装備がありません。</p>";
+                html += "<p>合成可能な対象がありません。</p>";
             } else {
-                candidates.forEach((item, idx) => {
-                    const stars = "☆".repeat(item.rarity || 1);
+                candidates.forEach((target) => {
+                    const idx = target.type === 'material' ? -1 : p.inventory.indexOf(target);
+                    const stars = target.rarity ? "☆".repeat(target.rarity) : "";
+                    const label = target.type === 'material' ? `[素材] ${target.name}` : `${target.name} ${stars}`;
+                    const action = target.type === 'material' ? `window.game.selectSynthMaterial('${target.name}')` : `window.game.selectSynthItem(${idx})`;
+
                     html += `<div style="margin-bottom:5px; border-bottom:1px solid #333; padding:5px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>${item.name} <span style="color:#ffcc00">${stars}</span></span>
-                        <button onclick="window.game.selectSynthItem(${p.inventory.indexOf(item)})">選択</button>
+                        <span style="font-size:11px;">${label}</span>
+                        <button onclick="${action}">選択</button>
                     </div>`;
                 });
             }
@@ -510,59 +558,83 @@ class Game {
         this.updateSynthesisUI();
     }
 
+    selectSynthMaterial(matKey) {
+        const m = this.player.materials[matKey];
+        if (!m || m.count <= 0) return;
+        this.synthBuffer.push({ type: 'material', name: matKey, materialData: m });
+        this.updateSynthesisUI();
+    }
+
     executeSynthesis() {
         const s1 = this.synthBuffer[0];
         const s2 = this.synthBuffer[1];
 
-        // 元のアイテムを削除
+        // 元のアイテム/素材を削除
         this.player.inventory = this.player.inventory.filter(it => it !== s1 && it !== s2);
-
-        // 合成ロジック
-        const rarity1 = s1.rarity || 1;
-        const rarity2 = s2.rarity || 1;
-        let newRarity = Math.max(rarity1, rarity2);
-
-        // レアリティ上昇判定 (同じレアリティ同士なら50%、違うなら20%で上昇)
-        const upChance = rarity1 === rarity2 ? 0.5 : 0.2;
-        if (Math.random() < upChance && newRarity < 5) {
-            newRarity++;
-            this.ui.log(`<span style="color:#ffcc00; font-weight:bold;">レアリティアップ！ ☆${newRarity} になりました！</span>`);
+        if (s2.type === 'material') {
+            this.player.materials[s2.name].count--;
         }
 
         const isWeapon = s1.type === 'weapon';
         const isAccessory = s1.type === 'accessory';
-
         const newItem = JSON.parse(JSON.stringify(s1)); // ベースをコピー
-        newItem.rarity = newRarity;
 
-        // ステータス強化 (平均の1.2倍程度)
-        const boost = 1.2;
-        if (isWeapon) {
-            newItem.atk = Math.floor(((s1.atk || 0) + (s2.atk || 0)) / 2 * boost);
-            newItem.name = `真・${s1.name.replace("真・", "")}`;
-        } else if (isAccessory) {
-            for (let s in newItem.stats) {
-                newItem.stats[s] = Math.floor(((s1.stats[s] || 0) + (s2.stats[s] || 0)) / 2 * boost);
+        let rarity1 = s1.rarity || 1;
+        let newRarity = rarity1;
+
+        if (s2.type === 'material') {
+            const m = s2.materialData;
+            // 素材による強化
+            const matLevelBonus = Math.floor(m.level * 1.5);
+            if (isWeapon) {
+                newItem.atk += matLevelBonus;
+                newItem.name = `${s1.name}+`;
+            } else {
+                for (let s in newItem.stats) {
+                    newItem.stats[s] += Math.floor(m.level / 2);
+                }
+                newItem.name = `${s1.name}+`;
             }
-            newItem.name = `極・${s1.name.replace("極・", "")}`;
+
+            // レアドロップ素材（☆が2つ以上保証）
+            if (m.isRare) {
+                newRarity = Math.max(newRarity + 1, 2);
+                this.ui.log(`<span style="color:#ffff00; font-weight:bold;">レアドロップ素材により、装備が真の力を解放した！</span>`);
+                if (isWeapon) newItem.atk = Math.floor(newItem.atk * 1.5);
+                else {
+                    for (let s in newItem.stats) newItem.stats[s] = Math.floor(newItem.stats[s] * 1.5);
+                }
+            } else {
+                if (Math.random() < 0.2) newRarity++;
+            }
         } else {
-            for (let s in newItem.stats) {
-                newItem.stats[s] = Math.floor(((s1.stats[s] || 0) + (s2.stats[s] || 0)) / 2 * boost);
+            // 装備同士の合成 (元々のロジック)
+            const rarity2 = s2.rarity || 1;
+            newRarity = Math.max(rarity1, rarity2);
+            const upChance = rarity1 === rarity2 ? 0.5 : 0.2;
+            if (Math.random() < upChance) newRarity++;
+
+            const boost = 1.2;
+            if (isWeapon) {
+                newItem.atk = Math.floor(((s1.atk || 0) + (s2.atk || 0)) / 2 * boost);
+                newItem.name = `真・${s1.name.replace("真・", "")}`;
+            } else {
+                for (let s in newItem.stats) {
+                    newItem.stats[s] = Math.floor(((s1.stats[s] || 0) + (s2.stats[s] || 0)) / 2 * boost);
+                }
+                newItem.name = isAccessory ? `極・${s1.name.replace("極・", "")}` : `硬・${s1.name.replace("硬・", "")}`;
             }
-            newItem.name = `硬・${s1.name.replace("硬・", "")}`;
+
+            // 属性の合成
+            if (s1.element === "無" || !s1.element) newItem.element = s2.element || "無";
+            else if (s2.element !== "無" && s2.element && s1.element !== s2.element) {
+                if (Math.random() < 0.4) newItem.element = `${s1.element}・${s2.element}`;
+            }
         }
 
-        // 属性の合成 (片方が無属性ならもう片方を継承)
-        if (s1.element === "無" || !s1.element) newItem.element = s2.element || "無";
-        else if (s2.element !== "無" && s2.element && s1.element !== s2.element) {
-            // 両方属性ありなら低確率でデュアル属性
-            if (Math.random() < 0.4) {
-                newItem.element = `${s1.element}・${s2.element}`;
-            }
-        }
-
+        newItem.rarity = Math.min(newRarity, 6);
         this.player.inventory.push(newItem);
-        this.ui.log(`${newItem.name} (☆${newRarity}) を合成した！`);
+        this.ui.log(`${newItem.name} (☆${newItem.rarity}) を合成した！`);
         this.ui.updateHeader(this.player);
         this.saveGame('auto');
         this.ui.hideModal();
@@ -633,8 +705,8 @@ class Game {
     }
 
     // セーブ処理 (type: 'manual' (slot 1-5) または 'auto')
-    saveGame(type = 'manual', slot = 1) {
-        const saveData = {
+    generateSaveData(type = 'manual', slot = 1) {
+        return {
             updatedAt: Date.now(),
             slot: type === 'auto' ? 'auto' : slot,
             player: {
@@ -665,7 +737,11 @@ class Game {
             })),
             isLastBossDefeated: this.isLastBossDefeated
         };
+    }
 
+    // セーブ処理 (type: 'manual' (slot 1-5) または 'auto')
+    saveGame(type = 'manual', slot = 1) {
+        const saveData = this.generateSaveData(type, slot);
         const key = type === 'auto' ? 'pixel_adventure_save_auto' : `pixel_adventure_save_slot_${slot}`;
 
         // 非同期風に実行してメインスレッドの詰まりを軽減
@@ -679,6 +755,32 @@ class Game {
                 this.ui.log("【システム】セーブに失敗しました。容量不足の可能性があります。");
             }
         }, 0);
+    }
+
+    getSaveCode() {
+        const data = this.generateSaveData('manual', 99);
+        try {
+            const json = JSON.stringify(data);
+            // UTF-8文字列をBase64に変換 (btoaはASCIIのみなので変換が必要)
+            return btoa(unescape(encodeURIComponent(json)));
+        } catch (e) {
+            console.error("Code generation failed:", e);
+            return null;
+        }
+    }
+
+    importSaveCode(code) {
+        if (!code) return;
+        try {
+            const json = decodeURIComponent(escape(atob(code)));
+            const data = JSON.parse(json);
+            this.applyLoadedData(data);
+            this.ui.log("【システム】セーブコードからデータを復元しました！");
+            this.ui.updateHeader(this.player);
+        } catch (e) {
+            console.error("Import failed:", e);
+            alert("無効なセーブコードです。");
+        }
     }
 
     // ロード処理 (type: 'slot' または 'auto')
@@ -704,47 +806,10 @@ class Game {
         }
 
         try {
-            // プレイヤーデータの復元
-            Object.assign(this.player, data.player);
-
-            // ワールドシードと座標復元
-            // インスタンスを再作成せず、既存のworldを更新する（重要：描画ループ重複回避）
-            this.worldSeed = data.worldSeed || Math.random();
-            this.world.seed = this.worldSeed;
-            this.world.rngValue = this.worldSeed;
-            this.world.playerX = data.player.playerX;
-            this.world.playerY = data.player.playerY;
-
-            // マップデータの再初期化が必要
-            const seededRandom = () => {
-                const x = Math.sin(this.world.rngValue++) * 10000;
-                return x - Math.floor(x);
-            };
-            this.world.initMap(seededRandom);
-            this.world.updateView();
-
-            this.isLoaded = true;
-
-            // クエスト状況の復元
-            data.quests.forEach(savedQ => {
-                const quest = this.allQuests.find(q => q.id === savedQ.id);
-                if (quest) {
-                    quest.isAccepted = savedQ.isAccepted;
-                    quest.isCompleted = savedQ.isCompleted;
-                    quest.currentCount = savedQ.currentCount;
-                }
-            });
-
-            this.isLastBossDefeated = data.isLastBossDefeated || false;
-
-            // 戦闘中の敗北からロードした場合のケア
-            this.isBattleActive = false;
-            this.ui.clearActionPanel();
-            this.showMainMap();
-
+            this.applyLoadedData(data);
             this.ui.log("【システム】セーブデータをロードしました！");
             if (type === 'auto') {
-                this.ui.log("Pixel Adventure Ver 2.5 へようこそ！続きから再会しました。");
+                this.ui.log("Pixel Adventure Ver 3.0 へようこそ！続きから再開しました。");
             }
             this.ui.updateHeader(this.player);
         } catch (e) {
@@ -753,6 +818,44 @@ class Game {
         } finally {
             this.isLoading = false;
         }
+    }
+
+    applyLoadedData(data) {
+        // プレイヤーデータの復元
+        Object.assign(this.player, data.player);
+
+        // ワールドシードと座標復元
+        this.worldSeed = data.worldSeed || Math.random();
+        this.world.seed = this.worldSeed;
+        this.world.rngValue = this.worldSeed;
+        this.world.playerX = data.player.playerX;
+        this.world.playerY = data.player.playerY;
+
+        // マップデータの再初期化
+        const seededRandom = () => {
+            const x = Math.sin(this.world.rngValue++) * 10000;
+            return x - Math.floor(x);
+        };
+        this.world.initMap(seededRandom);
+        this.world.updateView();
+
+        this.isLoaded = true;
+
+        // クエスト状況の復元
+        data.quests.forEach(savedQ => {
+            const quest = this.allQuests.find(q => q.id === savedQ.id);
+            if (quest) {
+                quest.isAccepted = savedQ.isAccepted;
+                quest.isCompleted = savedQ.isCompleted;
+                quest.currentCount = savedQ.currentCount;
+            }
+        });
+
+        this.isLastBossDefeated = data.isLastBossDefeated || false;
+
+        this.isBattleActive = false;
+        this.ui.clearActionPanel();
+        this.showMainMap();
     }
 
     // ゲームオーバー時の専用ロードメニュー
@@ -795,11 +898,11 @@ class Game {
     respawnPlayer() {
         this.player.hp = this.player.maxHp;
         this.isBattleActive = false;
-        this.world.playerX = 10;
-        this.world.playerY = 10;
+        this.world.playerX = 500;
+        this.world.playerY = 500;
         this.showMainMap();
         this.ui.updateHeader(this.player);
-        this.ui.log("【システム】始まりの町へ運ばれました。");
+        this.ui.log("【システム】始まりの村へ運ばれました。");
     }
 }
 
