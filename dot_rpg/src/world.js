@@ -5,7 +5,7 @@ export class World {
         this.seed = seed || Math.random();
         this.container = document.getElementById('world-container');
         this.canvas = document.getElementById('world-map-canvas');
-        this.ctx = this.canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+        this.ctx = this.canvas.getContext('2d', { alpha: false });
         this.playerSprite = document.getElementById('player-sprite');
         this.coordElement = document.getElementById('player-coords');
 
@@ -273,11 +273,18 @@ export class World {
 
         // 移動アニメーション後にエンカウント判定
         setTimeout(() => {
-            this.isMoving = false;
-            this.checkLocation();
-            this.checkEncounter();
-            // 押しっぱなし対応
-            this.handleMovement();
+            try {
+                this.isMoving = false;
+                this.checkLocation();
+                this.checkEncounter();
+                // 押しっぱなしによる連続移動の再開
+                if (!this.game.isBattleActive) {
+                    this.handleMovement();
+                }
+            } catch (e) {
+                console.error("Movement follow-up failed:", e);
+                this.isMoving = false; // エラー時も確実にフラグを折る
+            }
         }, 120);
     }
 

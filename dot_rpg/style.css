@@ -527,11 +527,13 @@ button:active {
     color: var(--accent-color);
     font-size: 14px;
 }
+
 /* バトルアリーナ (NEW) */
 #battle-arena {
     width: 600px;
     height: 320px;
-    margin: 0 auto 15px;
+    margin: 0 auto;
+    /* 隙間を詰めてレイアウトを安定化 */
     position: relative;
     border: calc(var(--pixel-size) / 2) solid var(--accent-color);
     background: linear-gradient(to bottom, #111122, #000);
@@ -541,10 +543,14 @@ button:active {
     align-items: center;
     justify-content: center;
     box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+    z-index: 50;
+    /* マップより前面 */
 }
 
 #battle-arena:not(.hidden) {
     display: flex;
+    margin-bottom: 15px;
+    /* 表示時のみ余白を空ける */
 }
 
 #battle-bg {
@@ -552,7 +558,7 @@ button:active {
     bottom: 0;
     width: 100%;
     height: 40%;
-    background: repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 20px, transparent 20px, transparent 40px);
+    background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 20px, transparent 20px, transparent 40px);
 }
 
 #monster-container {
@@ -576,7 +582,7 @@ button:active {
     width: 70%;
     text-align: center;
     padding: 5px;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.5);
     border: 1px solid #444;
 }
 
@@ -604,14 +610,31 @@ button:active {
 
 /* アニメーション */
 .monster-shake {
-    animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+    animation: shake 0.3s cubic-bezier(.36, .07, .19, .97) both;
 }
 
 @keyframes shake {
-    10%, 90% { transform: translate3d(-2px, 0, 0); }
-    20%, 80% { transform: translate3d(4px, 0, 0); }
-    30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-    40%, 60% { transform: translate3d(6px, 0, 0); }
+
+    10%,
+    90% {
+        transform: translate3d(-2px, 0, 0);
+    }
+
+    20%,
+    80% {
+        transform: translate3d(4px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+        transform: translate3d(-6px, 0, 0);
+    }
+
+    40%,
+    60% {
+        transform: translate3d(6px, 0, 0);
+    }
 }
 
 .monster-die {
@@ -620,7 +643,18 @@ button:active {
 }
 
 @keyframes monster-die {
-    0% { filter: brightness(1); transform: scale(1); }
-    30% { filter: brightness(10); transform: scale(1.2); }
-    100% { filter: brightness(20) opacity(0); transform: scale(0.2) rotate(20deg); }
+    0% {
+        filter: brightness(1);
+        transform: scale(1);
+    }
+
+    30% {
+        filter: brightness(10);
+        transform: scale(1.2);
+    }
+
+    100% {
+        filter: brightness(20) opacity(0);
+        transform: scale(0.2) rotate(20deg);
+    }
 }
