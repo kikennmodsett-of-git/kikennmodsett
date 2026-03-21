@@ -12,6 +12,10 @@ export class World {
         this.minimapCanvas = document.getElementById('minimap-canvas');
         this.minimapCtx = this.minimapCanvas.getContext('2d', { willReadFrequently: true });
 
+        // ミニマップ表示の高速化用オフスクリーンキャンバス
+        this.minimapCacheCanvas = document.createElement('canvas');
+        this.minimapCacheCtx = this.minimapCacheCanvas.getContext('2d');
+
         this.tileSize = 32;
         this.mapSize = 1000; // 1000x1000 (100万タイル)
         this.mapData = [];
@@ -298,12 +302,26 @@ export class World {
             this.canvas.height = containerHeight;
         }
 
+        // NaN ガード: 座標が不正な場合は初期位置へ
+        if (isNaN(this.playerX) || isNaN(this.playerY)) {
+            this.playerX = 500;
+            this.playerY = 500;
+        }
+
+        // 整数化して座標を確定
+        this.playerX = Math.round(this.playerX);
+        this.playerY = Math.round(this.playerY);
+
         this.pTargetLeft = this.playerX * this.tileSize;
         this.pTargetTop = this.playerY * this.tileSize;
 
         // カメラ座標は四捨五入してサブピクセルのによるボケを防止
         this.cameraX = Math.round((containerWidth / 2) - this.pTargetLeft - (this.tileSize / 2));
         this.cameraY = Math.round((containerHeight / 2) - this.pTargetTop - (this.tileSize / 2));
+
+        // さらに NaN チェック
+        if (isNaN(this.cameraX)) this.cameraX = 0;
+        if (isNaN(this.cameraY)) this.cameraY = 0;
 
         this.playerSprite.style.left = `${this.pTargetLeft}px`;
         this.playerSprite.style.top = `${this.pTargetTop}px`;
@@ -353,7 +371,11 @@ export class World {
             }
         }
         ctx.putImageData(img, 0, 0);
-        this.minimapBaseImg = ctx.getImageData(0, 0, w, h);
+
+        // オフスクリーンにコピー (drawImage 用)
+        this.minimapCacheCanvas.width = w;
+        this.minimapCacheCanvas.height = h;
+        this.minimapCacheCtx.putImageData(img, 0, 0);
     }
 
     render() {
@@ -373,7 +395,9 @@ export class World {
 
     drawMinimapOverlay() {
         const ctx = this.minimapCtx;
-        ctx.putImageData(this.minimapBaseImg, 0, 0);
+        // 高速な drawImage を使用してベースを描画
+        ctx.clearRect(0, 0, this.minimapCanvas.width, this.minimapCanvas.height);
+        ctx.drawImage(this.minimapCacheCanvas, 0, 0);
 
         // プレイヤーのドット
         ctx.fillStyle = "#0ff";
@@ -381,14 +405,14 @@ export class World {
     }
 
     draw() {
+        const ctx = this.ctx;
+        const ts = this.tileSize;
+        const cw = this.canvas.width;
+        const ch = this.canvas.height;
+
+        if (cw <= 0 || ch <= 0 || isNaN(this.cameraX)) return;
+
         try {
-            const ctx = this.ctx;
-            const ts = this.tileSize;
-            const cw = this.canvas.width;
-            const ch = this.canvas.height;
-
-            if (cw <= 0 || ch <= 0) return;
-
             ctx.fillStyle = "#000";
             ctx.fillRect(0, 0, cw, ch);
 
@@ -450,9 +474,10 @@ export class World {
                     }
                 }
             }
-            ctx.restore();
         } catch (e) {
             console.error("Draw loop error:", e);
+        } finally {
+            ctx.restore();
         }
     }
 
