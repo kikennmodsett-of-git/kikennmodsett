@@ -54,6 +54,12 @@ body {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+#speed-display {
+    color: #ffffff;
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
 #judgment {
     position: absolute;
     top: 50%;

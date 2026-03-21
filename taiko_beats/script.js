@@ -18,6 +18,9 @@ class TaikoGame {
         this.startTime = 0;
         this.currentTime = 0;
 
+        // Effects
+        this.particles = [];
+
         // Settings
         this.laneY = window.innerHeight * 0.5;
         this.judgmentX = 200;
@@ -117,9 +120,10 @@ class TaikoGame {
 
     prepareEnergyMap() {
         const pcmData = this.audioBuffer.getChannelData(0);
-        const frameSize = 1024;
-        const overlap = 512;
+        const frameSize = 2048; // 解析精度を向上
+        const overlap = 1024;
         this.energyMap = [];
+        this.speedMultiplierMap = []; // 時間ごとの速度倍率
         this.maxEnergy = 0;
 
         for (let i = 0; i < pcmData.length - frameSize; i += overlap) {
@@ -131,27 +135,78 @@ class TaikoGame {
             this.energyMap.push(energy);
             if (energy > this.maxEnergy) this.maxEnergy = energy;
         }
+
+        // スピード倍率の算出 (0.7x 〜 1.5x の範囲で盛り上がりに追従)
+        const config = this.diffConfig[this.difficulty];
+        this.energyMap.forEach(energy => {
+            const ratio = energy / (this.maxEnergy || 1);
+            // 難易度が高いほどスピードの変化を激しくする
+            const range = this.difficulty === 'hard' ? 0.8 : (this.difficulty === 'normal' ? 0.5 : 0.3);
+            const multiplier = 1.0 + (ratio - 0.3) * range;
+            this.speedMultiplierMap.push(Math.max(0.7, Math.min(2.0, multiplier)));
+        });
+    }
+
+    calculateScrollPositions() {
+        const sampleRate = this.audioBuffer.sampleRate;
+        const overlap = 1024;
+        const stepTime = overlap / sampleRate;
+        this.scrollPosMap = [{ time: 0, pos: 0 }];
+
+        let currentPos = 0;
+        const baseSpeed = this.diffConfig[this.difficulty].speed;
+
+        for (let i = 0; i < this.speedMultiplierMap.length; i++) {
+            const multiplier = this.speedMultiplierMap[i];
+            const dt = stepTime;
+            currentPos += baseSpeed * multiplier * dt;
+            this.scrollPosMap.push({
+                time: (i + 1) * stepTime,
+                pos: currentPos
+            });
+        }
+    }
+
+    getScrollPos(time) {
+        if (time <= 0) return 0;
+        const sampleRate = this.audioBuffer.sampleRate;
+        const overlap = 1024;
+        const stepTime = overlap / sampleRate;
+
+        const index = Math.floor(time / stepTime);
+        if (index >= this.scrollPosMap.length - 1) return this.scrollPosMap[this.scrollPosMap.length - 1].pos;
+
+        const p1 = this.scrollPosMap[index];
+        const p2 = this.scrollPosMap[index + 1];
+
+        // 線形補間
+        const t = (time - p1.time) / (p2.time - p1.time);
+        return p1.pos + t * (p2.pos - p1.pos);
     }
 
     async generateChart() {
         if (!this.energyMap) return;
 
         const sampleRate = this.audioBuffer.sampleRate;
-        const overlap = 512;
+        const overlap = 1024; // prepareEnergyMapと合わせる
         const detections = [];
 
         const config = this.diffConfig[this.difficulty];
         const threshold = Math.max(0.01, this.maxEnergy * config.thresholdRatio);
-        const minGap = config.minGap;
+
         let lastPeakTime = -1;
 
         for (let i = 0; i < this.energyMap.length; i++) {
             const energy = this.energyMap[i];
+            const ratio = energy / (this.maxEnergy || 1);
 
             if (energy > threshold) {
                 const time = (i * overlap) / sampleRate;
 
-                if (time - lastPeakTime > minGap) {
+                // 盛り上がっている場所ほどノーツ密度を高くする (minGapを小さくする)
+                const dynamicMinGap = config.minGap * (1.2 - ratio * 0.5);
+
+                if (time - lastPeakTime > dynamicMinGap) {
                     detections.push({
                         time: time,
                         duration: 0,
@@ -180,6 +235,7 @@ class TaikoGame {
         this.isPlaying = true;
         this.startTime = this.audioCtx.currentTime + 1.0; // 1s delay
 
+        this.calculateScrollPositions();
         this.noteSpeed = this.diffConfig[this.difficulty].speed;
 
         this.sourceNode = this.audioCtx.createBufferSource();
@@ -228,6 +284,11 @@ class TaikoGame {
 
             target.hit = true;
             this.showJudgment(judgment);
+            this.judgmentPop = 1.0;
+
+            // 判定に応じた色でエフェクトを生成
+            const colors = { good: '#ffcc00', nice: '#00ffcc', bad: '#666666' };
+            this.createParticles(this.judgmentX, this.laneY, colors[judgment]);
 
             if (judgment !== 'bad') {
                 this.combo++;
@@ -258,6 +319,12 @@ class TaikoGame {
         if (!this.isPlaying) return;
 
         this.currentTime = this.audioCtx.currentTime - this.startTime;
+        this.updateSpeedUI();
+
+        // パーティクルの更新
+        this.particles = this.particles.filter(p => p.active);
+        this.particles.forEach(p => p.update());
+
         this.draw();
 
         // Game end check
@@ -291,14 +358,20 @@ class TaikoGame {
         this.ctx.strokeStyle = 'white';
         this.ctx.lineWidth = 4;
         this.ctx.beginPath();
-        this.ctx.arc(this.judgmentX, this.laneY, this.noteRadius + 5, 0, Math.PI * 2);
+        // ヒット時に少し大きくする演出
+        const hitScale = this.judgmentPop || 0;
+        this.ctx.arc(this.judgmentX, this.laneY, this.noteRadius + 5 + hitScale * 10, 0, Math.PI * 2);
         this.ctx.stroke();
+        if (this.judgmentPop > 0) this.judgmentPop *= 0.8; // 減衰
 
         // Draw Notes
         this.notes.forEach(note => {
             if (note.hit) return;
 
-            const x = this.judgmentX + (note.time - this.currentTime) * this.noteSpeed;
+            const notePos = this.getScrollPos(note.time);
+            const currentPos = this.getScrollPos(this.currentTime);
+            const x = this.judgmentX + (notePos - currentPos);
+
             if (x < -100 || x > this.canvas.width + 100) return;
 
             this.ctx.beginPath();
@@ -316,6 +389,31 @@ class TaikoGame {
             this.ctx.textBaseline = 'middle';
             this.ctx.fillText(note.type === 0 ? 'ドン' : 'カッ', x, this.laneY);
         });
+
+        // Draw Particles
+        this.particles.forEach(p => p.draw(this.ctx));
+    }
+
+    createParticles(x, y, color) {
+        const count = 15;
+        for (let i = 0; i < count; i++) {
+            this.particles.push(new Particle(x, y, color));
+        }
+    }
+
+    updateSpeedUI() {
+        // 現在のスピード倍率を取得して表示
+        const sampleRate = this.audioBuffer.sampleRate;
+        const overlap = 1024;
+        const stepTime = overlap / sampleRate;
+        const index = Math.floor(this.currentTime / stepTime);
+        const multiplier = this.speedMultiplierMap[index] || 1.0;
+
+        const el = document.getElementById('speed-display');
+        if (this.isPlaying && el) {
+            el.innerText = `SPEED: x${multiplier.toFixed(2)}`;
+            el.style.color = multiplier > 1.2 ? '#ff4444' : (multiplier < 0.9 ? '#44ff44' : '#ffffff');
+        }
     }
 
     endGame() {
@@ -340,6 +438,44 @@ class TaikoGame {
         document.getElementById('clear-status').innerText = isClear
             ? 'おめでとうございます！合格ラインを突破しました。'
             : `不合格... (必要スコア: ${clearThreshold})`;
+    }
+}
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.active = true;
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 8 + 2;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+
+        this.life = 1.0;
+        this.decay = Math.random() * 0.05 + 0.02;
+        this.size = Math.random() * 5 + 2;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.2; // 重力
+        this.vx *= 0.98;
+        this.vy *= 0.98;
+        this.life -= this.decay;
+        if (this.life <= 0) this.active = false;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
     }
 }
 
