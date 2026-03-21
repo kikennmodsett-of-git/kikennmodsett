@@ -62,11 +62,13 @@ export class UI {
         this.monsterGraphic.classList.remove('monster-die', 'monster-shake');
         this.arena.classList.remove('hidden');
         document.getElementById('world-container').classList.add('hidden');
+        document.body.classList.add('in-battle');
     }
 
     hideBattleArena() {
         this.arena.classList.add('hidden');
         document.getElementById('world-container').classList.remove('hidden');
+        document.body.classList.remove('in-battle');
     }
 
     updateMonsterHP(current, max) {
